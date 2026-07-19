@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LöneKollen Light</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2621">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root{
+    --paper:#FAF8F2;
+    --paper-dim:#F0EDE3;
+    --ink:#1B2621;
+    --ink-soft:#5B6B62;
+    --line:#D8D3C4;
+    --mark:#E8A63C;
+    --mark-deep:#C9862B;
+    --good:#3E7D5B;
+    --bad:#B4523B;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--paper-dim); color:var(--ink); font-family:'Work Sans',sans-serif; min-height:100vh;}
+  .num{font-family:'IBM Plex Mono',monospace;}
+
+  #app{max-width:480px; margin:0 auto; padding:20px 16px 100px; min-height:100vh;}
+
+  header.top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;}
+  header.top h1{font-size:20px; font-weight:800; letter-spacing:-0.01em; margin:0;}
+  header.top h1 span{color:var(--mark-deep);}
+  header.top .month{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-soft);}
+
+  .receipt{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:20px 18px 26px;
+    position:relative;
+    margin-bottom:16px;
+    box-shadow:0 1px 0 rgba(27,38,33,0.03);
+  }
+  .receipt::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:-1px; height:10px;
+    background-image: linear-gradient(135deg, var(--paper-dim) 50%, transparent 50%),
+                       linear-gradient(45deg, var(--paper-dim) 50%, transparent 50%);
+    background-size: 14px 14px;
+    background-position: bottom left;
+    background-repeat: repeat-x;
+  }
+  .receipt h2{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;}
+  .dash{border:none; border-top:1px dashed var(--line); margin:14px 0;}
+
+  .row{display:flex; justify-content:space-between; align-items:baseline; font-size:14px; padding:3px 0;}
+  .row .v{font-family:'IBM Plex Mono',monospace; font-weight:600;}
+
+  .tier-badge{display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; letter-spacing:.02em;}
+  .tier-none{background:#EFE9DA; color:var(--ink-soft);}
+  .tier-on{background:var(--mark); color:#241a06;}
+
+  .progress-track{height:8px; background:var(--paper-dim); border-radius:4px; overflow:hidden; margin:10px 0 4px; border:1px solid var(--line);}
+  .progress-fill{height:100%; background:repeating-linear-gradient(90deg, var(--mark) 0 6px, var(--mark-deep) 6px 12px);}
+  .progress-label{font-size:11px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+
+  .kpi-warn{margin-top:10px; padding:8px 10px; background:#FBEDE8; border:1px solid #E7BCAE; border-radius:4px; font-size:12px; color:var(--bad);}
+
+  form.entry{display:flex; flex-direction:column; gap:12px;}
+  .field label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:5px;}
+  .field input{width:100%; padding:12px 12px; border:1px solid var(--line); border-radius:4px; font-size:16px; font-family:'IBM Plex Mono',monospace; background:var(--paper); color:var(--ink);}
+  .field input:focus{outline:2px solid var(--mark); outline-offset:1px; border-color:var(--mark-deep);}
+  button.primary{background:var(--ink); color:var(--paper); border:none; padding:13px; border-radius:4px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Work Sans',sans-serif;}
+  button.primary:active{transform:translateY(1px);}
+  button.secondary{background:transparent; color:var(--ink); border:1px solid var(--line); padding:10px; border-radius:4px; font-size:13px; cursor:pointer;}
+
+  .history-item{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .history-item:last-child{border-bottom:none;}
+  .history-item .del{color:var(--bad); background:none; border:none; font-size:12px; cursor:pointer; padding:4px 8px;}
+
+  nav.tabs{position:fixed; bottom:0; left:0; right:0; background:var(--paper); border-top:1px solid var(--line); display:flex; max-width:480px; margin:0 auto;}
+  nav.tabs button{flex:1; padding:12px 4px 10px; background:none; border:none; font-size:11px; color:var(--ink-soft); font-family:'Work Sans',sans-serif; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
+  nav.tabs button.active{color:var(--ink); font-weight:700;}
+  nav.tabs button .dot{width:5px; height:5px; border-radius:50%; background:transparent;}
+  nav.tabs button.active .dot{background:var(--mark);}
+
+  .empty{text-align:center; padding:30px 10px; color:var(--ink-soft); font-size:14px;}
+  .banner{background:var(--ink); color:var(--paper); padding:10px 14px; border-radius:4px; font-size:13px; margin-bottom:16px;}
+
+  .code-box textarea{width:100%; min-height:70px; padding:10px; border:1px solid var(--line); border-radius:4px; font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--paper);}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const STORE_CONFIG = 'llConfig';
+const STORE_ENTRIES = 'llEntries';
+
+function loadConfig(){ try{ return JSON.parse(localStorage.getItem(STORE_CONFIG)||'null'); }catch(e){ return null; } }
+function saveConfig(cfg){ localStorage.setItem(STORE_CONFIG, JSON.stringify(cfg)); }
+function loadEntries(){ try{ return JSON.parse(localStorage.getItem(STORE_ENTRIES)||'[]'); }catch(e){ return []; } }
+function saveEntries(list){ localStorage.setItem(STORE_ENTRIES, JSON.stringify(list)); }
+
+function decodeConfig(code){
+  try{
+    const json = decodeURIComponent(escape(atob(code.replace(/-/g,'+').replace(/_/g,'/'))));
+    const cfg = JSON.parse(json);
+    if(!cfg.periods) return null;
+    return cfg;
+  }catch(e){ return null; }
+}
+
+let state = { tab:'idag', banner:null };
+
+function fmt(n){ return Math.round(n).toLocaleString('sv-SE'); }
+
+function periodFor(dateStr, cfg){
+  return (cfg.periods||[]).find(p => dateStr >= p.start && dateStr <= p.slut);
+}
+
+function computePeriodStats(period, entries){
+  const es = entries.filter(e => e.date >= period.start && e.date <= period.slut);
+  const dagar = es.length;
+  const totalTB = es.reduce((s,e)=>s+Number(e.tb||0),0);
+  const totalTjanster = es.reduce((s,e)=>s+Number(e.tjanster||0),0);
+  const snitt = dagar ? totalTB/dagar : 0;
+  const tjSnitt = dagar ? totalTjanster/dagar : 0;
+
+  const steg = (period.steg||[]).slice().sort((a,b)=>a.krav-b.krav);
+  let kpiBlocked = false;
+  let effektivaSteg = steg;
+  if(period.kpi && period.kpi.tjansterPerDag != null && tjSnitt < period.kpi.tjansterPerDag){
+    kpiBlocked = true;
+    effektivaSteg = steg.filter(s => s.namn !== period.kpi.kravFor);
+  }
+
+  let currentTier = null;
+  for(const s of effektivaSteg){ if(snitt >= s.krav) currentTier = s; }
+  let nextTier = null;
+  for(const s of effektivaSteg){ if(snitt < s.krav){ nextTier = s; break; } }
+
+  let procent = currentTier ? currentTier.procent : 0;
+  let provision = totalTB * procent/100;
+
+  const sr = period.specialregel;
+  let specialActive = false;
+  if(sr && dagar>0 && snitt >= sr.snittKrav){
+    specialActive = true;
+    procent = sr.procentHela;
+    const grans = sr.snittKrav*dagar;
+    const over = Math.max(0, totalTB - grans);
+    provision = totalTB*sr.procentHela/100 + over*sr.procentOver/100;
+  }
+
+  let bonusActive = false, bonusProcent = 0, bonusBelopp = 0;
+  const tb = period.tjanstebonus;
+  if(tb && dagar>0 && tjSnitt >= tb.tjansterPerDag){
+    bonusActive = true;
+    bonusProcent = tb.bonusProcent;
+    bonusBelopp = totalTB * tb.bonusProcent/100;
+    provision += bonusBelopp;
+  }
+
+  return { dagar, totalTB, totalTjanster, snitt, tjSnitt, currentTier, nextTier, procent, provision, kpiBlocked, specialActive, bonusActive, bonusProcent, bonusBelopp, kravForNext: nextTier ? nextTier.krav : (sr && !specialActive ? sr.snittKrav : null) };
+}
+
+function applyCode(raw){
+  let code = raw.trim();
+  try{
+    const u = new URL(code);
+    code = u.searchParams.get('kod') || code;
+  }catch(e){ /* not a url, treat as raw code */ }
+  const cfg = decodeConfig(code);
+  if(!cfg){ alert('Kunde inte läsa koden. Kontrollera att den kopierades korrekt.'); return false; }
+  saveConfig(cfg);
+  state.banner = 'Ny budget inläst: ' + (cfg.namn || cfg.month || '');
+  return true;
+}
+
+function init(){
+  const params = new URLSearchParams(location.search);
+  const urlKod = params.get('kod');
+  if(urlKod){
+    const cfg = decodeConfig(urlKod);
+    if(cfg){ saveConfig(cfg); state.banner = 'Ny budget inläst: ' + (cfg.namn || cfg.month || ''); }
+    history.replaceState({}, '', location.pathname);
+  }
+  render();
+}
+
+function render(){
+  const app = document.getElementById('app');
+  const cfg = loadConfig();
+  const entries = loadEntries();
+
+  let html = `<header class="top"><h1>Löne<span>Kollen</span> Light</h1>`;
+  html += `<div class="month">${cfg && cfg.namn ? cfg.namn : (cfg && cfg.month) || '—'}</div></header>`;
+
+  if(state.banner){
+    html += `<div class="banner">${state.banner}</div>`;
+  }
+
+  if(!cfg){
+    html += `<div class="receipt"><h2>Ingen budget inläst</h2>
+      <p style="font-size:14px; color:var(--ink-soft); margin:0 0 14px;">Öppna länken eller QR-koden du fick av din chef, eller klistra in koden nedan.</p>
+      <div class="code-box"><textarea id="codeInput" placeholder="Klistra in kod eller länk här"></textarea></div>
+      <div style="height:10px"></div>
+      <button class="primary" onclick="submitCode()">Läs in budget</button>
+    </div>`;
+    app.innerHTML = html;
+    return;
+  }
+
+  if(state.tab === 'idag'){
+    html += renderIdag(cfg, entries);
+  } else if(state.tab === 'oversikt'){
+    html += renderOversikt(cfg, entries);
+  } else if(state.tab === 'historik'){
+    html += renderHistorik(cfg, entries);
+  } else if(state.tab === 'installningar'){
+    html += renderInstallningar(cfg);
+  }
+
+  html += `<nav class="tabs">
+    ${tabBtn('idag','Registrera')}
+    ${tabBtn('oversikt','Översikt')}
+    ${tabBtn('historik','Historik')}
+    ${tabBtn('installningar','Kod')}
+  </nav>`;
+
+  app.innerHTML = html;
+  state.banner = null;
+}
+
+function tabBtn(id,label){
+  return `<button class="${state.tab===id?'active':''}" onclick="setTab('${id}')"><span class="dot"></span>${label}</button>`;
+}
+function setTab(id){ state.tab = id; render(); }
+window.setTab = setTab;
+
+function renderIdag(cfg, entries){
+  const today = new Date().toISOString().slice(0,10);
+  return `<div class="receipt">
+    <h2>Dagens pass</h2>
+    <form class="entry" onsubmit="return addEntry(event)">
+      <div class="field"><label>Datum</label><input type="date" id="fDate" value="${today}" required></div>
+      <div class="field"><label>TB (kr)</label><input type="number" id="fTb" inputmode="decimal" placeholder="0" required></div>
+      <div class="field"><label>Antal tjänster</label><input type="number" id="fTj" inputmode="numeric" placeholder="0" required></div>
+      <button class="primary" type="submit">Spara pass</button>
+    </form>
+  </div>`;
+}
+
+function addEntry(ev){
+  ev.preventDefault();
+  const date = document.getElementById('fDate').value;
+  const tb = document.getElementById('fTb').value;
+  const tj = document.getElementById('fTj').value;
+  if(!date) return false;
+  const entries = loadEntries().filter(e=>e.date!==date);
+  entries.push({date, tb:Number(tb), tjanster:Number(tj)});
+  entries.sort((a,b)=>a.date.localeCompare(b.date));
+  saveEntries(entries);
+  state.tab = 'oversikt';
+  state.banner = 'Pass sparat för ' + date;
+  render();
+  return false;
+}
+window.addEntry = addEntry;
+
+function renderOversikt(cfg, entries){
+  let html = '';
+  const periods = cfg.periods||[];
+  let totalProvision = 0, totalTB = 0, totalTj = 0;
+
+  periods.forEach(p=>{
+    const st = computePeriodStats(p, entries);
+    totalProvision += st.provision; totalTB += st.totalTB; totalTj += st.totalTjanster;
+    const nextGap = st.kravForNext != null ? Math.max(0, st.kravForNext - st.snitt) : null;
+    const progressPct = st.kravForNext ? Math.min(100, (st.snitt/st.kravForNext)*100) : 100;
+
+    html += `<div class="receipt">
+      <h2>${p.namn} <span class="num" style="text-transform:none; font-weight:400;">${p.start} – ${p.slut}</span></h2>
+      <div class="row"><span>Arbetsdagar</span><span class="v">${st.dagar}</span></div>
+      <div class="row"><span>Totalt TB</span><span class="v">${fmt(st.totalTB)} kr</span></div>
+      <div class="row"><span>Snitt/dag</span><span class="v">${fmt(st.snitt)} kr</span></div>
+      <div class="row"><span>Tjänster/dag</span><span class="v">${st.tjSnitt.toFixed(1)}</span></div>
+      <hr class="dash">
+      <div class="row"><span>Nuvarande nivå</span><span class="tier-badge ${st.currentTier?'tier-on':'tier-none'}">${st.currentTier ? st.currentTier.namn+' · '+st.currentTier.procent+'%' : 'Ingen nivå ännu'}</span></div>
+      ${st.specialActive ? `<div class="row"><span>Specialregel aktiv</span><span class="v" style="color:var(--good)">Ja</span></div>` : ''}
+      ${nextGap != null && nextGap > 0 ? `
+        <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
+        <div class="progress-label">${fmt(nextGap)} kr/dag kvar till nästa nivå (${fmt(st.kravForNext)} kr)</div>
+      ` : ''}
+      ${st.kpiBlocked ? `<div class="kpi-warn">Tjänstekrav (≥${p.kpi.tjansterPerDag}/dag) ej uppnått — högsta nivån ${p.kpi.kravFor} kräver detta.</div>` : ''}
+      ${p.tjanstebonus ? `<div class="row"><span>Tjänstebonus (≥${p.tjanstebonus.tjansterPerDag}/dag → +${p.tjanstebonus.bonusProcent}%)</span><span class="v" style="color:${st.bonusActive?'var(--good)':'var(--ink-soft)'}">${st.bonusActive ? '+'+fmt(st.bonusBelopp)+' kr' : 'Ej uppnått'}</span></div>` : ''}
+      <hr class="dash">
+      <div class="row"><span>Uppskattad provision</span><span class="v">${fmt(st.provision)} kr</span></div>
+    </div>`;
+  });
+
+  html = `<div class="receipt">
+      <h2>Månadssammanfattning</h2>
+      <div class="row"><span>Totalt TB</span><span class="v">${fmt(totalTB)} kr</span></div>
+      <div class="row"><span>Totalt tjänster</span><span class="v">${totalTj}</span></div>
+      <div class="row"><span>Uppskattad total provision</span><span class="v" style="color:var(--mark-deep)">${fmt(totalProvision)} kr</span></div>
+    </div>` + html;
+
+  if(!periods.length){ html += `<div class="empty">Inga perioder i budgeten.</div>`; }
+  return html;
+}
+
+function renderHistorik(cfg, entries){
+  if(!entries.length){ return `<div class="receipt"><h2>Historik</h2><div class="empty">Inga pass registrerade ännu.</div></div>`; }
+  let rows = entries.slice().reverse().map(e => `
+    <div class="history-item">
+      <span>${e.date}</span>
+      <span class="num">${fmt(e.tb)} kr · ${e.tjanster} tj</span>
+      <button class="del" onclick="delEntry('${e.date}')">Ta bort</button>
+    </div>`).join('');
+  return `<div class="receipt"><h2>Historik</h2>${rows}</div>`;
+}
+
+function delEntry(date){
+  if(!confirm('Ta bort passet för '+date+'?')) return;
+  saveEntries(loadEntries().filter(e=>e.date!==date));
+  render();
+}
+window.delEntry = delEntry;
+
+function renderInstallningar(cfg){
+  return `<div class="receipt">
+    <h2>Ny budgetkod</h2>
+    <p style="font-size:13px; color:var(--ink-soft); margin:0 0 12px;">När en ny månad börjar, klistra in den nya länken eller koden här.</p>
+    <div class="code-box"><textarea id="codeInput" placeholder="Klistra in kod eller länk här"></textarea></div>
+    <div style="height:10px"></div>
+    <button class="primary" onclick="submitCode()">Uppdatera budget</button>
+    <div style="height:16px"></div>
+    <hr class="dash">
+    <div style="height:12px"></div>
+    <div class="row"><span>Nuvarande budget</span><span class="v">${cfg.namn||cfg.month||'—'}</span></div>
+    <div style="height:12px"></div>
+    <button class="secondary" onclick="resetAll()">Rensa all data</button>
+  </div>`;
+}
+
+function submitCode(){
+  const raw = document.getElementById('codeInput').value;
+  if(!raw) return;
+  if(applyCode(raw)){ state.tab='oversikt'; render(); }
+}
+window.submitCode = submitCode;
+
+function resetAll(){
+  if(!confirm('Detta raderar budget och all historik permanent. Fortsätt?')) return;
+  localStorage.removeItem(STORE_CONFIG);
+  localStorage.removeItem(STORE_ENTRIES);
+  state.tab='idag';
+  render();
+}
+window.resetAll = resetAll;
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+
+init();
+</script>
+</body>
+</html>
