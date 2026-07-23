@@ -124,7 +124,7 @@ function decodeConfig(code){
 }
 
 const ADMIN_PASSWORD = '3454772';
-let state = { tab:'idag', banner:null, adminUnlocked:false, adminPeriods:[] };
+let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[] };
 
 function openAdmin(){
   if(state.adminUnlocked){ state.tab='admin'; render(); return; }
