@@ -5,108 +5,101 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LöneKollen Light</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1B2621">
+<meta name="theme-color" content="#041752">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Work+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   :root{
-    --paper:#FAF8F2;
-    --paper-dim:#F0EDE3;
-    --ink:#1B2621;
-    --ink-soft:#5B6B62;
-    --line:#D8D3C4;
-    --mark:#E8A63C;
-    --mark-deep:#C9862B;
-    --good:#3E7D5B;
-    --bad:#B4523B;
+    --bg:#F2F4F7;
+    --card:#FFFFFF;
+    --navy:#041752;
+    --navy-deep:#02103A;
+    --ink:#14171C;
+    --ink-soft:#667085;
+    --line:#E4E7EC;
+    --green:#5EBE2E;
+    --green-deep:#4A9924;
+    --bad:#D92D20;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; padding:0; background:var(--paper-dim); color:var(--ink); font-family:'Work Sans',sans-serif; min-height:100vh; overflow-x:hidden;}
-  .num{font-family:'IBM Plex Mono',monospace;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden;}
+  .num{font-variant-numeric:tabular-nums; font-weight:700;}
 
-  #app{max-width:480px; margin:0 auto; padding:20px 16px 100px; min-height:100vh;}
+  #app{max-width:480px; margin:0 auto; padding:0 0 100px; min-height:100vh;}
 
-  header.top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;}
-  header.top h1{font-size:20px; font-weight:800; letter-spacing:-0.01em; margin:0;}
-  header.top h1 span{color:var(--mark-deep);}
-  header.top .month{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-soft);}
+  header.top{display:flex; align-items:center; justify-content:space-between; background:#fff; color:var(--navy); padding:16px 16px; margin:0 0 18px; border-bottom:1px solid var(--line); box-shadow:0 1px 3px rgba(4,23,82,0.05);}
+  header.top h1{font-size:19px; font-weight:800; letter-spacing:-0.01em; margin:0; color:var(--navy); display:flex; align-items:center; gap:6px;}
+  header.top h1::before{content:""; display:inline-block; width:10px; height:16px; background:var(--green); clip-path:polygon(0 0, 60% 0, 100% 50%, 60% 100%, 0 100%, 40% 50%);}
+  header.top h1 span{color:var(--green-deep);}
+  header.top .month{font-size:12px; color:var(--ink-soft); font-weight:600;}
 
   .receipt{
-    background:var(--paper);
+    background:var(--card);
     border:1px solid var(--line);
-    border-radius:2px;
-    padding:20px 18px 26px;
+    border-radius:10px;
+    padding:18px;
     position:relative;
-    margin-bottom:16px;
-    box-shadow:0 1px 0 rgba(27,38,33,0.03);
+    margin:0 16px 14px;
+    box-shadow:0 1px 3px rgba(4,23,82,0.06);
   }
-  .receipt::after{
-    content:"";
-    position:absolute; left:0; right:0; bottom:-1px; height:10px;
-    background-image: linear-gradient(135deg, var(--paper-dim) 50%, transparent 50%),
-                       linear-gradient(45deg, var(--paper-dim) 50%, transparent 50%);
-    background-size: 14px 14px;
-    background-position: bottom left;
-    background-repeat: repeat-x;
-  }
-  .receipt h2{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); margin:0 0 14px; display:flex; justify-content:space-between; align-items:center;}
-  .dash{border:none; border-top:1px dashed var(--line); margin:14px 0;}
+  .receipt h2{font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin:0 0 14px; display:flex; justify-content:space-between; align-items:center; font-weight:700;}
+  .dash{border:none; border-top:1px solid var(--line); margin:14px 0;}
 
-  .row{display:flex; justify-content:space-between; align-items:baseline; font-size:14px; padding:3px 0;}
-  .row .v{font-family:'IBM Plex Mono',monospace; font-weight:600;}
+  .row{display:flex; justify-content:space-between; align-items:baseline; font-size:14px; padding:4px 0;}
+  .row .v{font-weight:700;}
 
-  .tier-badge{display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; letter-spacing:.02em;}
-  .tier-none{background:#EFE9DA; color:var(--ink-soft);}
-  .tier-on{background:var(--mark); color:#241a06;}
+  .tier-badge{display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; letter-spacing:.02em;}
+  .tier-none{background:#EEF0F3; color:var(--ink-soft);}
+  .tier-on{background:var(--green); color:#fff;}
 
-  .progress-track{height:8px; background:var(--paper-dim); border-radius:4px; overflow:hidden; margin:10px 0 4px; border:1px solid var(--line);}
-  .progress-fill{height:100%; background:repeating-linear-gradient(90deg, var(--mark) 0 6px, var(--mark-deep) 6px 12px);}
-  .progress-label{font-size:11px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+  .progress-track{height:8px; background:#EEF0F3; border-radius:4px; overflow:hidden; margin:10px 0 4px;}
+  .progress-fill{height:100%; background:var(--green); border-radius:4px;}
+  .progress-label{font-size:11px; color:var(--ink-soft); font-weight:500;}
 
-  .kpi-warn{margin-top:10px; padding:8px 10px; background:#FBEDE8; border:1px solid #E7BCAE; border-radius:4px; font-size:12px; color:var(--bad);}
+  .kpi-warn{margin-top:10px; padding:9px 11px; background:#FDECEA; border:1px solid #F5C2BC; border-radius:6px; font-size:12px; color:var(--bad); font-weight:500;}
 
   form.entry{display:flex; flex-direction:column; gap:12px;}
-  .field label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:5px;}
-  .field input{width:100%; padding:12px 12px; border:1px solid var(--line); border-radius:4px; font-size:16px; font-family:'IBM Plex Mono',monospace; background:var(--paper); color:var(--ink);}
-  .field input:focus{outline:2px solid var(--mark); outline-offset:1px; border-color:var(--mark-deep);}
-  button.primary{background:var(--ink); color:var(--paper); border:none; padding:13px; border-radius:4px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Work Sans',sans-serif;}
-  button.primary:active{transform:translateY(1px);}
-  button.secondary{background:transparent; color:var(--ink); border:1px solid var(--line); padding:10px; border-radius:4px; font-size:13px; cursor:pointer;}
+  .field label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); margin-bottom:5px; font-weight:600;}
+  .field input{width:100%; padding:12px 12px; border:1px solid var(--line); border-radius:6px; font-size:16px; font-family:'Inter',sans-serif; background:var(--card); color:var(--ink);}
+  .field input:focus{outline:2px solid var(--green); outline-offset:1px; border-color:var(--green-deep);}
+  button.primary{background:var(--green); color:#fff; border:none; padding:13px; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Inter',sans-serif;}
+  button.primary:active{transform:translateY(1px); background:var(--green-deep);}
+  button.secondary{background:#fff; color:var(--navy); border:1px solid var(--line); padding:10px; border-radius:8px; font-size:13px; cursor:pointer; font-weight:700;}
 
-  .history-item{display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .history-item{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;}
   .history-item:last-child{border-bottom:none;}
-  .history-item .del{color:var(--bad); background:none; border:none; font-size:12px; cursor:pointer; padding:4px 8px;}
+  .history-item .del{color:var(--bad); background:none; border:none; font-size:12px; cursor:pointer; padding:4px 8px; font-weight:600;}
 
-  nav.tabs{position:fixed; bottom:0; left:0; right:0; background:var(--paper); border-top:1px solid var(--line); display:flex; max-width:480px; margin:0 auto;}
-  nav.tabs button{flex:1; padding:12px 4px 10px; background:none; border:none; font-size:11px; color:var(--ink-soft); font-family:'Work Sans',sans-serif; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;}
-  nav.tabs button.active{color:var(--ink); font-weight:700;}
+  nav.tabs{position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--line); display:flex; max-width:480px; margin:0 auto; box-shadow:0 -2px 8px rgba(4,23,82,0.05);}
+  nav.tabs button{flex:1; padding:12px 4px 10px; background:none; border:none; font-size:11px; color:var(--ink-soft); font-family:'Inter',sans-serif; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; font-weight:600;}
+  nav.tabs button.active{color:var(--navy); font-weight:800;}
   nav.tabs button .dot{width:5px; height:5px; border-radius:50%; background:transparent;}
-  nav.tabs button.active .dot{background:var(--mark);}
+  nav.tabs button.active .dot{background:var(--green);}
 
   .empty{text-align:center; padding:30px 10px; color:var(--ink-soft); font-size:14px;}
-  .banner{background:var(--ink); color:var(--paper); padding:10px 14px; border-radius:4px; font-size:13px; margin-bottom:16px;}
+  .banner{background:var(--green); color:#fff; padding:10px 14px; border-radius:6px; font-size:13px; margin:0 16px 16px; font-weight:600;}
 
-  .code-box textarea{width:100%; min-height:70px; padding:10px; border:1px solid var(--line); border-radius:4px; font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--paper);}
+  .code-box textarea{width:100%; min-height:70px; padding:10px; border:1px solid var(--line); border-radius:6px; font-family:'Inter',sans-serif; font-size:13px; background:var(--card);}
   .hidden{display:none !important;}
 
-  .gear-btn{background:none; border:1px solid var(--line); width:30px; height:30px; border-radius:50%; font-size:14px; color:var(--ink-soft); cursor:pointer; flex-shrink:0;}
+  .gear-btn{background:#F2F4F7; border:1px solid var(--line); width:30px; height:30px; border-radius:50%; font-size:14px; color:var(--navy); cursor:pointer; flex-shrink:0;}
   .lock-pad{display:flex; flex-direction:column; align-items:center; gap:14px; padding:30px 10px;}
-  .lock-pad input{width:160px; text-align:center; letter-spacing:.2em; font-size:20px; padding:12px; border:1px solid var(--line); border-radius:4px; font-family:'IBM Plex Mono',monospace; background:var(--paper);}
+  .lock-pad input{width:160px; text-align:center; letter-spacing:.2em; font-size:20px; padding:12px; border:1px solid var(--line); border-radius:6px; font-family:'Inter',sans-serif; background:var(--card);}
 
-  .period-block{border:1px dashed var(--line); border-radius:6px; padding:14px; margin-bottom:14px;}
+  .period-block{border:1px solid var(--line); border-radius:10px; padding:14px; margin:0 16px 14px;}
   .period-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
-  .period-head strong{font-size:14px;}
+  .period-head strong{font-size:14px; color:var(--navy);}
   .steg-row{display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto; gap:6px; margin-bottom:8px; align-items:center;}
-  .steg-row input{width:100%; min-width:0; padding:9px 8px; border:1px solid var(--line); border-radius:4px; font-size:13px; font-family:'IBM Plex Mono',monospace; background:var(--paper);}
+  .steg-row input{width:100%; min-width:0; padding:9px 8px; border:1px solid var(--line); border-radius:6px; font-size:13px; font-family:'Inter',sans-serif; background:var(--card);}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .checkbox-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px;}
-  .special-block{border-top:1px dashed var(--line); margin-top:10px; padding-top:10px;}
-  .btn-add{background:var(--paper-dim); border:1px dashed var(--line); padding:8px 12px; border-radius:4px; font-size:13px; width:100%; color:var(--ink-soft); cursor:pointer; margin-bottom:14px;}
-  .btn-small{background:none; border:none; color:var(--bad); font-size:12px; padding:4px 8px; cursor:pointer;}
-  .out{word-break:break-all; font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--paper-dim); padding:10px; border-radius:4px; border:1px solid var(--line);}
+  .special-block{border-top:1px solid var(--line); margin-top:10px; padding-top:10px;}
+  .btn-add{background:#EEF1F7; border:1px dashed var(--navy); padding:8px 12px; border-radius:6px; font-size:13px; width:calc(100% - 32px); margin:0 16px 14px; color:var(--navy); cursor:pointer; font-weight:600;}
+  .btn-small{background:none; border:none; color:var(--bad); font-size:12px; padding:4px 8px; cursor:pointer; font-weight:600;}
+  .out{word-break:break-all; font-size:12px; background:#EEF1F7; padding:10px; border-radius:6px; border:1px solid var(--line);}
   .qr-wrap{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:14px;}
-  .qr-wrap img{border:8px solid var(--paper); box-shadow:0 0 0 1px var(--line);}
+  .qr-wrap img{border:8px solid var(--card); box-shadow:0 0 0 1px var(--line);}
 </style>
 </head>
 <body>
@@ -400,13 +393,13 @@ function renderOversikt(cfg, entries){
       <div class="row"><span>Tjänster/dag</span><span class="v">${st.tjSnitt.toFixed(1)}</span></div>
       <hr class="dash">
       <div class="row"><span>Nuvarande nivå</span><span class="tier-badge ${st.currentTier?'tier-on':'tier-none'}">${st.currentTier ? st.currentTier.namn+' · '+st.currentTier.procent+'%' : 'Ingen nivå ännu'}</span></div>
-      ${st.specialActive ? `<div class="row"><span>Specialregel aktiv</span><span class="v" style="color:var(--good)">Ja</span></div>` : ''}
+      ${st.specialActive ? `<div class="row"><span>Specialregel aktiv</span><span class="v" style="color:var(--green)">Ja</span></div>` : ''}
       ${nextGap != null && nextGap > 0 ? `
         <div class="progress-track"><div class="progress-fill" style="width:${progressPct}%"></div></div>
         <div class="progress-label">${fmt(nextGap)} kr/dag kvar till nästa nivå (${fmt(st.kravForNext)} kr)</div>
       ` : ''}
       ${st.kpiBlocked ? `<div class="kpi-warn">Tjänstekrav (≥${p.kpi.tjansterPerDag}/dag) ej uppnått — högsta nivån ${p.kpi.kravFor} kräver detta.</div>` : ''}
-      ${(st.bonusar||[]).map(b => `<div class="row"><span>${b.namn || (b.typ==='varde'?'Tjänstevärde':'Tjänster/dag')} (≥${fmt(b.krav)}${b.typ==='varde'?' kr':'/dag'} → +${b.bonusProcent}%)</span><span class="v" style="color:${b.active?'var(--good)':'var(--ink-soft)'}">${b.active ? '+'+fmt(b.belopp)+' kr' : 'Ej uppnått'}</span></div>`).join('')}
+      ${(st.bonusar||[]).map(b => `<div class="row"><span>${b.namn || (b.typ==='varde'?'Tjänstevärde':'Tjänster/dag')} (≥${fmt(b.krav)}${b.typ==='varde'?' kr':'/dag'} → +${b.bonusProcent}%)</span><span class="v" style="color:${b.active?'var(--green)':'var(--ink-soft)'}">${b.active ? '+'+fmt(b.belopp)+' kr' : 'Ej uppnått'}</span></div>`).join('')}
       <hr class="dash">
       <div class="row"><span>Uppskattad provision</span><span class="v">${fmt(st.provision)} kr</span></div>
     </div>`;
@@ -416,7 +409,7 @@ function renderOversikt(cfg, entries){
       <h2>Månadssammanfattning</h2>
       <div class="row"><span>Totalt TB</span><span class="v">${fmt(totalTB)} kr</span></div>
       <div class="row"><span>Totalt tjänster</span><span class="v">${totalTj}</span></div>
-      <div class="row"><span>Uppskattad total provision</span><span class="v" style="color:var(--mark-deep)">${fmt(totalProvision)} kr</span></div>
+      <div class="row"><span>Uppskattad total provision</span><span class="v" style="color:var(--green-deep)">${fmt(totalProvision)} kr</span></div>
     </div>` + html;
 
   if(!periods.length){ html += `<div class="empty">Inga perioder i budgeten.</div>`; }
@@ -524,7 +517,7 @@ function renderAdmin(){
         <div class="special-block" style="margin-top:0; border-top:none; padding-top:0;">
           <div class="row2">
             <div class="field"><label>Mätvärde</label>
-              <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--paper);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
+              <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
                 <option value="antal" ${b.typ==='antal'?'selected':''}>Tjänster/dag (antal)</option>
                 <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
               </select>
