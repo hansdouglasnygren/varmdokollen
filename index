@@ -89,6 +89,23 @@
 
   .code-box textarea{width:100%; min-height:70px; padding:10px; border:1px solid var(--line); border-radius:4px; font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--paper);}
   .hidden{display:none !important;}
+
+  .gear-btn{background:none; border:1px solid var(--line); width:30px; height:30px; border-radius:50%; font-size:14px; color:var(--ink-soft); cursor:pointer; flex-shrink:0;}
+  .lock-pad{display:flex; flex-direction:column; align-items:center; gap:14px; padding:30px 10px;}
+  .lock-pad input{width:160px; text-align:center; letter-spacing:.2em; font-size:20px; padding:12px; border:1px solid var(--line); border-radius:4px; font-family:'IBM Plex Mono',monospace; background:var(--paper);}
+
+  .period-block{border:1px dashed var(--line); border-radius:6px; padding:14px; margin-bottom:14px;}
+  .period-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .period-head strong{font-size:14px;}
+  .steg-row{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:center;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .checkbox-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px;}
+  .special-block{border-top:1px dashed var(--line); margin-top:10px; padding-top:10px;}
+  .btn-add{background:var(--paper-dim); border:1px dashed var(--line); padding:8px 12px; border-radius:4px; font-size:13px; width:100%; color:var(--ink-soft); cursor:pointer; margin-bottom:14px;}
+  .btn-small{background:none; border:none; color:var(--bad); font-size:12px; padding:4px 8px; cursor:pointer;}
+  .out{word-break:break-all; font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--paper-dim); padding:10px; border-radius:4px; border:1px solid var(--line);}
+  .qr-wrap{display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:14px;}
+  .qr-wrap img{border:8px solid var(--paper); box-shadow:0 0 0 1px var(--line);}
 </style>
 </head>
 <body>
@@ -112,7 +129,83 @@ function decodeConfig(code){
   }catch(e){ return null; }
 }
 
-let state = { tab:'idag', banner:null };
+const ADMIN_PASSWORD = '3454772';
+let state = { tab:'idag', banner:null, adminUnlocked:false, adminPeriods:[] };
+
+function openAdmin(){
+  if(state.adminUnlocked){ state.tab='admin'; render(); return; }
+  const pass = prompt('Ange adminkod:');
+  if(pass === null) return;
+  if(pass === ADMIN_PASSWORD){ state.adminUnlocked = true; state.tab='admin'; render(); }
+  else { alert('Fel kod.'); }
+}
+window.openAdmin = openAdmin;
+
+function encodeConfig(cfg){
+  const json = JSON.stringify(cfg);
+  return btoa(unescape(encodeURIComponent(json))).replace(/\+/g,'-').replace(/\//g,'_');
+}
+
+function addAdminPeriod(){
+  state.adminPeriods.push({
+    namn:'Period ' + (state.adminPeriods.length+1), start:'', slut:'',
+    steg:[{namn:'Brons', krav:'', procent:''}],
+    kpiOn:false, kpiKrav:'', kpiFor:'',
+    bonusOn:false, bonusKrav:'', bonusProcent:'',
+    specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
+  });
+  render();
+}
+window.addAdminPeriod = addAdminPeriod;
+function removeAdminPeriod(i){ state.adminPeriods.splice(i,1); render(); }
+window.removeAdminPeriod = removeAdminPeriod;
+function addAdminSteg(pi){ state.adminPeriods[pi].steg.push({namn:'',krav:'',procent:''}); render(); }
+window.addAdminSteg = addAdminSteg;
+function removeAdminSteg(pi,si){ state.adminPeriods[pi].steg.splice(si,1); render(); }
+window.removeAdminSteg = removeAdminSteg;
+function toggleAdminField(pi, field){ state.adminPeriods[pi][field] = !state.adminPeriods[pi][field]; render(); }
+window.toggleAdminField = toggleAdminField;
+function setAdminField(pi, field, value){ state.adminPeriods[pi][field] = value; }
+window.setAdminField = setAdminField;
+function setAdminSteg(pi, si, field, value){ state.adminPeriods[pi].steg[si][field] = value; }
+window.setAdminSteg = setAdminSteg;
+
+function generateAdminLink(){
+  const monthName = document.getElementById('adminMonthName').value || 'Budget';
+  if(!state.adminPeriods.length){ alert('Lägg till minst en period.'); return; }
+  const cfg = {
+    namn: monthName,
+    periods: state.adminPeriods.map(p => {
+      const period = {
+        namn:p.namn, start:p.start, slut:p.slut,
+        steg:p.steg.filter(s=>s.namn && s.krav!=='' && s.procent!=='').map(s=>({namn:s.namn, krav:Number(s.krav), procent:Number(s.procent)}))
+      };
+      if(p.kpiOn && p.kpiKrav && p.kpiFor){ period.kpi = {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor}; }
+      if(p.bonusOn && p.bonusKrav && p.bonusProcent){ period.tjanstebonus = {tjansterPerDag:Number(p.bonusKrav), bonusProcent:Number(p.bonusProcent)}; }
+      if(p.specialOn && p.specialSnitt){ period.specialregel = {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)}; }
+      return period;
+    })
+  };
+  const code = encodeConfig(cfg);
+  const link = location.origin + location.pathname + '?kod=' + code;
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=' + encodeURIComponent(link);
+  document.getElementById('adminResult').innerHTML = `
+    <div class="receipt">
+      <h2>Länk att skicka i WhatsApp</h2>
+      <div class="out" id="adminLinkOut">${link}</div>
+      <div style="height:8px"></div>
+      <button class="secondary" onclick="copyAdminLink()">Kopiera länk</button>
+      <div class="qr-wrap">
+        <img src="${qrUrl}" alt="QR-kod" width="180" height="180">
+        <button class="secondary" onclick="window.open('${qrUrl}','_blank')">Öppna QR i fullstorlek</button>
+      </div>
+    </div>`;
+}
+window.generateAdminLink = generateAdminLink;
+function copyAdminLink(){
+  navigator.clipboard.writeText(document.getElementById('adminLinkOut').innerText).then(()=>alert('Länk kopierad!'));
+}
+window.copyAdminLink = copyAdminLink;
 
 function fmt(n){ return Math.round(n).toLocaleString('sv-SE'); }
 
@@ -196,10 +289,16 @@ function render(){
   const entries = loadEntries();
 
   let html = `<header class="top"><h1>Löne<span>Kollen</span> Light</h1>`;
-  html += `<div class="month">${cfg && cfg.namn ? cfg.namn : (cfg && cfg.month) || '—'}</div></header>`;
+  html += `<div style="display:flex; align-items:center; gap:10px;"><div class="month">${cfg && cfg.namn ? cfg.namn : (cfg && cfg.month) || '—'}</div><button class="gear-btn" onclick="openAdmin()" title="Admin">&#9881;</button></div></header>`;
 
   if(state.banner){
     html += `<div class="banner">${state.banner}</div>`;
+  }
+
+  if(state.tab === 'admin'){
+    html += state.adminUnlocked ? renderAdmin() : renderLock();
+    app.innerHTML = html;
+    return;
   }
 
   if(!cfg){
@@ -344,6 +443,99 @@ function renderInstallningar(cfg){
     <div style="height:12px"></div>
     <button class="secondary" onclick="resetAll()">Rensa all data</button>
   </div>`;
+}
+
+function renderLock(){
+  return `<div class="receipt">
+    <div class="lock-pad">
+      <div style="font-size:28px;">&#128274;</div>
+      <div style="font-size:13px; color:var(--ink-soft);">Adminläge — endast för chef</div>
+      <input type="password" id="lockInput" inputmode="numeric" placeholder="Kod" autofocus>
+      <button class="primary" style="width:160px;" onclick="submitLock()">Lås upp</button>
+      <button class="secondary" style="width:160px;" onclick="backFromAdmin()">Avbryt</button>
+    </div>
+  </div>`;
+}
+function submitLock(){
+  const val = document.getElementById('lockInput').value;
+  if(val === ADMIN_PASSWORD){ state.adminUnlocked = true; render(); }
+  else { alert('Fel kod.'); }
+}
+window.submitLock = submitLock;
+function backFromAdmin(){ state.tab = 'oversikt'; render(); }
+window.backFromAdmin = backFromAdmin;
+
+function renderAdmin(){
+  if(!state.adminPeriods.length){ state.adminPeriods.push({
+    namn:'Period 1', start:'', slut:'', steg:[{namn:'Brons', krav:'', procent:''}],
+    kpiOn:false, kpiKrav:'', kpiFor:'', bonusOn:false, bonusKrav:'', bonusProcent:'',
+    specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
+  }); }
+
+  let html = `<div class="receipt">
+    <h2>Admin — bygg månadens budget <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
+    <div class="field"><label>Namn (visas i appen)</label><input id="adminMonthName" placeholder="t.ex. Juli 2026"></div>
+  </div>`;
+
+  state.adminPeriods.forEach((p, pi) => {
+    html += `<div class="receipt period-block">
+      <div class="period-head"><strong>${p.namn || 'Period ' + (pi+1)}</strong>
+        <button class="btn-small" onclick="removeAdminPeriod(${pi}); render()">Ta bort period</button></div>
+      <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)"></div>
+      <div class="row2">
+        <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)"></div>
+        <div class="field"><label>Slutdatum</label><input type="date" value="${p.slut}" oninput="setAdminField(${pi},'slut',this.value)"></div>
+      </div>
+      <label style="font-size:12px; color:var(--ink-soft); display:block; margin:10px 0 6px;">Stege (kr/dag → procent)</label>
+      ${p.steg.map((s,si)=>`
+        <div class="steg-row">
+          <input placeholder="Namn (Brons)" value="${s.namn}" oninput="setAdminSteg(${pi},${si},'namn',this.value)">
+          <input type="number" placeholder="kr/dag" value="${s.krav}" oninput="setAdminSteg(${pi},${si},'krav',this.value)">
+          <input type="number" placeholder="%" value="${s.procent}" oninput="setAdminSteg(${pi},${si},'procent',this.value)">
+          <button class="btn-small" onclick="removeAdminSteg(${pi},${si}); render()">✕</button>
+        </div>`).join('')}
+      <button class="secondary" onclick="addAdminSteg(${pi})">+ Lägg till steg</button>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="kpi${pi}" ${p.kpiOn?'checked':''} onchange="toggleAdminField(${pi},'kpiOn')">
+        <label for="kpi${pi}">Tjänstekrav gäller för högsta steget</label>
+      </div>
+      ${p.kpiOn ? `
+        <div class="row2" style="margin-top:8px;">
+          <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.kpiKrav}" oninput="setAdminField(${pi},'kpiKrav',this.value)"></div>
+          <div class="field"><label>Gäller vilket steg</label><input value="${p.kpiFor}" oninput="setAdminField(${pi},'kpiFor',this.value)" placeholder="t.ex. Guld"></div>
+        </div>` : ''}
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="bonus${pi}" ${p.bonusOn?'checked':''} onchange="toggleAdminField(${pi},'bonusOn')">
+        <label for="bonus${pi}">Tjänstebonus (extra % utöver TB-procenten)</label>
+      </div>
+      ${p.bonusOn ? `
+        <div class="row2" style="margin-top:8px;">
+          <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.bonusKrav}" oninput="setAdminField(${pi},'bonusKrav',this.value)"></div>
+          <div class="field"><label>Extra procentenheter</label><input type="number" value="${p.bonusProcent}" oninput="setAdminField(${pi},'bonusProcent',this.value)"></div>
+        </div>` : ''}
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
+        <label for="special${pi}">Specialregel vid högt snitt</label>
+      </div>
+      ${p.specialOn ? `
+        <div class="special-block">
+          <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)"></div>
+          <div class="row2">
+            <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)"></div>
+            <div class="field"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)"></div>
+          </div>
+        </div>` : ''}
+    </div>`;
+  });
+
+  html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>
+    <div class="receipt"><button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button></div>
+    <div id="adminResult"></div>`;
+
+  return html;
 }
 
 function submitCode(){
