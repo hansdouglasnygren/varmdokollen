@@ -114,7 +114,7 @@ function loadUserStore(){ return localStorage.getItem(STORE_USERSTORE) || ''; }
 function saveUserStore(v){ localStorage.setItem(STORE_USERSTORE, v); }
 function chooseUserStore(v){ saveUserStore(v); render(); }
 window.chooseUserStore = chooseUserStore;
-const STORE_LABELS = { varmdo:'Värmdö', akersberga:'Åkersberga' };
+const STORE_LABELS = { varmdo:'Värmdö', akersberga:'Åkersberga', bada:'Båda butikerna' };
 function periodsForUser(cfg){
   const store = loadUserStore();
   return (cfg.periods||[]).filter(p => !p.butik || p.butik==='bada' || p.butik===store);
@@ -221,7 +221,7 @@ function addAdminPeriod(){
     kpiOn:false, kpiKrav:'', kpiFor:'',
     bonusar:[],
     kundklubbOn:false, kundklubbProcent:20,
-    specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
+    specialOn:false, specialSnitt:'', specialProcentHela:'', specialOverOn:false, specialProcentOver:''
   });
   render();
 }
@@ -262,7 +262,10 @@ function generateAdminLink(){
       const bonusar = (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)}));
       if(bonusar.length){ period.bonusar = bonusar; }
       if(p.kundklubbOn && p.kundklubbProcent!==''){ period.kundklubbskrav = Number(p.kundklubbProcent); }
-      if(p.specialOn && p.specialSnitt){ period.specialregel = {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)}; }
+      if(p.specialOn && p.specialSnitt){
+        period.specialregel = {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0)};
+        if(p.specialOverOn && p.specialProcentOver!==''){ period.specialregel.procentOver = Number(p.specialProcentOver); }
+      }
       return period;
     })
   };
@@ -324,9 +327,12 @@ function computePeriodStats(period, entries, kundklubbMet){
   if(sr && dagar>0 && snitt >= sr.snittKrav){
     specialActive = true;
     procent = sr.procentHela;
-    const grans = sr.snittKrav*dagar;
-    const over = Math.max(0, totalTB - grans);
-    provision = totalTB*sr.procentHela/100 + over*sr.procentOver/100;
+    provision = totalTB*sr.procentHela/100;
+    if(sr.procentOver != null){
+      const grans = sr.snittKrav*dagar;
+      const over = Math.max(0, totalTB - grans);
+      provision += over*sr.procentOver/100;
+    }
   }
 
   const bonusar = (period.bonusar||[]).map(b => {
@@ -353,7 +359,7 @@ function applyCode(raw){
   const cfg = decodeConfig(code);
   if(!cfg){ alert('Kunde inte läsa koden. Kontrollera att den kopierades korrekt.'); return false; }
   const own = loadUserStore();
-  if(cfg.butik && own && cfg.butik !== own){
+  if(cfg.butik && cfg.butik !== 'bada' && own && cfg.butik !== own){
     const ok = confirm('Den här koden verkar vara för '+STORE_LABELS[cfg.butik]+', men du är registrerad som '+STORE_LABELS[own]+'. Vill du ändå läsa in den?');
     if(!ok) return false;
   }
@@ -370,7 +376,7 @@ function init(){
     if(cfg){
       const own = loadUserStore();
       let proceed = true;
-      if(cfg.butik && own && cfg.butik !== own){
+      if(cfg.butik && cfg.butik !== 'bada' && own && cfg.butik !== own){
         proceed = confirm('Den här länken verkar vara för '+STORE_LABELS[cfg.butik]+', men du är registrerad som '+STORE_LABELS[own]+'. Vill du ändå läsa in den?');
       }
       if(proceed){ saveConfig(cfg); state.banner = 'Ny budget inläst: ' + (cfg.namn || cfg.month || ''); }
@@ -639,7 +645,7 @@ function renderAdmin(){
     namn:'Period 1', start:'', slut:'', butik:'bada', steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'', bonusar:[],
     kundklubbOn:false, kundklubbProcent:20,
-    specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
+    specialOn:false, specialSnitt:'', specialProcentHela:'', specialOverOn:false, specialProcentOver:''
   }); }
 
   let html = subTabBar;
@@ -653,6 +659,7 @@ function renderAdmin(){
         <option value="" ${!state.adminButik?'selected':''}>— Välj butik —</option>
         <option value="varmdo" ${state.adminButik==='varmdo'?'selected':''}>Värmdö</option>
         <option value="akersberga" ${state.adminButik==='akersberga'?'selected':''}>Åkersberga</option>
+        <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
       </select>
     </div>
     <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" placeholder="t.ex. Juli 2026"></div>
@@ -717,15 +724,17 @@ function renderAdmin(){
 
       <div class="checkbox-row" style="margin-top:14px;">
         <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
-        <label for="special${pi}">Specialregel vid högt snitt</label>
+        <label for="special${pi}">Fast procent på hela TB vid visst snitt</label>
       </div>
       ${p.specialOn ? `
         <div class="special-block">
           <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)"></div>
-          <div class="row2">
-            <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)"></div>
-            <div class="field"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)"></div>
+          <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)"></div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="specialover${pi}" ${p.specialOverOn?'checked':''} onchange="toggleAdminField(${pi},'specialOverOn')">
+            <label for="specialover${pi}">+ Extra procent på TB över gränsen (valfritt)</label>
           </div>
+          ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)"></div>` : ''}
         </div>` : ''}
 
       <div class="checkbox-row">
@@ -763,7 +772,7 @@ function collectAdminConfig(){
       kpi: (p.kpiOn && p.kpiKrav && p.kpiFor) ? {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor} : null,
       bonusar: (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)})),
       kundklubbskrav: (p.kundklubbOn && p.kundklubbProcent!=='') ? Number(p.kundklubbProcent) : null,
-      specialregel: (p.specialOn && p.specialSnitt) ? {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)} : null,
+      specialregel: (p.specialOn && p.specialSnitt) ? Object.assign({snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0)}, (p.specialOverOn && p.specialProcentOver!=='') ? {procentOver:Number(p.specialProcentOver)} : {}) : null,
       tjanstinfoText: p.a4On ? (p.tjanstinfoText||'') : '',
       tavlingText: p.a4On ? (p.tavlingText||'') : '',
       varningText: p.a4On ? (p.varningText||'') : ''
@@ -798,9 +807,12 @@ function buildA4Html(full){
     if(p.specialregel){
       specialText = `
         <p class="section-label">${p.specialregel.procentHela}% på hela periodens TB</p>
-        <p class="note">Om du under perioden har ett genomsnittligt TB på minst ${p.specialregel.snittKrav.toLocaleString('sv-SE')} kr per arbetad dag, får du ${p.specialregel.procentHela}% provision på hela periodens TB istället för ordinarie stege.</p>
+        <p class="note">Om du under perioden har ett genomsnittligt TB på minst ${p.specialregel.snittKrav.toLocaleString('sv-SE')} kr per arbetad dag, får du ${p.specialregel.procentHela}% provision på hela periodens TB istället för ordinarie stege.</p>`;
+      if(p.specialregel.procentOver != null){
+        specialText += `
         <p class="section-label">${p.specialregel.procentOver}% på TB över gränsen</p>
         <p class="note">När du har uppnått snittet på ${p.specialregel.snittKrav.toLocaleString('sv-SE')} kr i TB per arbetad dag får du dessutom ${p.specialregel.procentOver}% provision på allt TB som överstiger snittkravet.</p>`;
+      }
     }
 
     const tjanstinfo = p.tjanstinfoText ? `<p class="section-label">Vad räknas som en tjänst?</p><p class="note">${esc(p.tjanstinfoText)}</p>` : '';
