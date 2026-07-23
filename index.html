@@ -109,6 +109,16 @@
 const STORE_CONFIG = 'llConfig';
 const STORE_ENTRIES = 'llEntries';
 const STORE_KUNDKLUBB = 'llKundklubb';
+const STORE_USERSTORE = 'llUserStore';
+function loadUserStore(){ return localStorage.getItem(STORE_USERSTORE) || ''; }
+function saveUserStore(v){ localStorage.setItem(STORE_USERSTORE, v); }
+function chooseUserStore(v){ saveUserStore(v); render(); }
+window.chooseUserStore = chooseUserStore;
+const STORE_LABELS = { varmdo:'Värmdö', akersberga:'Åkersberga' };
+function periodsForUser(cfg){
+  const store = loadUserStore();
+  return (cfg.periods||[]).filter(p => !p.butik || p.butik==='bada' || p.butik===store);
+}
 
 function loadConfig(){ try{ return JSON.parse(localStorage.getItem(STORE_CONFIG)||'null'); }catch(e){ return null; } }
 function saveConfig(cfg){ localStorage.setItem(STORE_CONFIG, JSON.stringify(cfg)); }
@@ -199,7 +209,7 @@ function encodeConfig(cfg){
 
 function addAdminPeriod(){
   state.adminPeriods.push({
-    namn:'Period ' + (state.adminPeriods.length+1), start:'', slut:'',
+    namn:'Period ' + (state.adminPeriods.length+1), start:'', slut:'', butik:'bada',
     steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'',
     bonusar:[],
@@ -236,7 +246,7 @@ function generateAdminLink(){
     namn: monthName,
     periods: state.adminPeriods.map(p => {
       const period = {
-        namn:p.namn, start:p.start, slut:p.slut,
+        namn:p.namn, start:p.start, slut:p.slut, butik:p.butik||'bada',
         steg:p.steg.filter(s=>s.namn && s.krav!=='' && s.procent!=='').map(s=>({namn:s.namn, krav:Number(s.krav), procent:Number(s.procent)}))
       };
       if(p.kpiOn && p.kpiKrav && p.kpiFor){ period.kpi = {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor}; }
@@ -353,6 +363,20 @@ function render(){
   const app = document.getElementById('app');
   const cfg = loadConfig();
   const entries = loadEntries();
+  const userStore = loadUserStore();
+
+  if(!userStore && state.tab !== 'admin'){
+    app.innerHTML = `<header class="top"><h1>Löne<span>Kollen</span> Light</h1></header>
+      <div class="receipt">
+        <h2>Vilken butik jobbar du i?</h2>
+        <p style="font-size:14px; color:var(--ink-soft); margin:0 0 16px;">Det här avgör vilken provisionsmodell du ser om chefen kör olika modeller per butik.</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <button class="primary" onclick="chooseUserStore('varmdo')">Värmdö</button>
+          <button class="primary" onclick="chooseUserStore('akersberga')">Åkersberga</button>
+        </div>
+      </div>`;
+    return;
+  }
 
   let html = `<header class="top"><h1>Löne<span>Kollen</span> Light</h1>`;
   html += `<div style="display:flex; align-items:center; gap:10px;"><div class="month">${cfg && cfg.namn ? cfg.namn : (cfg && cfg.month) || '—'}</div><button class="gear-btn" onclick="openAdmin()" title="Admin">&#9881;</button></div></header>`;
@@ -439,7 +463,7 @@ window.addEntry = addEntry;
 
 function renderOversikt(cfg, entries){
   let html = '';
-  const periods = cfg.periods||[];
+  const periods = periodsForUser(cfg);
   const kundklubb = loadKundklubb();
   let totalProvision = 0, totalTB = 0, totalTj = 0;
 
@@ -452,7 +476,7 @@ function renderOversikt(cfg, entries){
     const progressPct = st.kravForNext ? Math.min(100, (st.snitt/st.kravForNext)*100) : 100;
 
     html += `<div class="receipt">
-      <h2>${p.namn} <span class="num" style="text-transform:none; font-weight:400;">${p.start} – ${p.slut}</span></h2>
+      <h2>${p.namn} <span class="num" style="text-transform:none; font-weight:400;">${p.start} – ${p.slut}${p.butik && p.butik!=='bada' ? ' · '+STORE_LABELS[p.butik] : ''}</span></h2>
       <div class="row"><span>Arbetsdagar</span><span class="v">${st.dagar}</span></div>
       <div class="row"><span>Totalt TB</span><span class="v">${fmt(st.totalTB)} kr</span></div>
       <div class="row"><span>Snitt/dag</span><span class="v">${fmt(st.snitt)} kr</span></div>
@@ -486,7 +510,10 @@ function renderOversikt(cfg, entries){
       <div class="row"><span>Uppskattad total provision</span><span class="v" style="color:var(--green-deep)">${fmt(totalProvision)} kr</span></div>
     </div>` + html;
 
-  if(!periods.length){ html += `<div class="empty">Inga perioder i budgeten.</div>`; }
+  if(!periods.length){
+    const hasOtherStorePeriods = (cfg.periods||[]).length > 0;
+    html += `<div class="empty">${hasOtherStorePeriods ? 'Inga perioder gäller för din butik ('+(STORE_LABELS[loadUserStore()]||'')+') i den här budgeten.' : 'Inga perioder i budgeten.'}</div>`;
+  }
   return html;
 }
 
@@ -509,7 +536,17 @@ function delEntry(date){
 window.delEntry = delEntry;
 
 function renderInstallningar(cfg){
+  const userStore = loadUserStore();
   return `<div class="receipt">
+    <h2>Din butik</h2>
+    <div class="row"><span>Just nu registrerad som</span><span class="v">${STORE_LABELS[userStore]||'—'}</span></div>
+    <div style="height:10px"></div>
+    <div style="display:flex; gap:8px;">
+      <button class="secondary" style="flex:1; ${userStore==='varmdo'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="chooseUserStore('varmdo'); render()">Värmdö</button>
+      <button class="secondary" style="flex:1; ${userStore==='akersberga'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="chooseUserStore('akersberga'); render()">Åkersberga</button>
+    </div>
+  </div>
+  <div class="receipt">
     <h2>Ny budgetkod</h2>
     <p style="font-size:13px; color:var(--ink-soft); margin:0 0 12px;">När en ny månad börjar, klistra in den nya länken eller koden här.</p>
     <div class="code-box"><textarea id="codeInput" placeholder="Klistra in kod eller länk här"></textarea></div>
@@ -576,7 +613,7 @@ function renderAdmin(){
   }
 
   if(!state.adminPeriods.length){ state.adminPeriods.push({
-    namn:'Period 1', start:'', slut:'', steg:[{namn:'Brons', krav:'', procent:''}],
+    namn:'Period 1', start:'', slut:'', butik:'bada', steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'', bonusar:[],
     kundklubbOn:false, kundklubbProcent:20,
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
@@ -594,6 +631,13 @@ function renderAdmin(){
       <div class="period-head"><strong>${p.namn || 'Period ' + (pi+1)}</strong>
         <button class="btn-small" onclick="removeAdminPeriod(${pi}); render()">Ta bort period</button></div>
       <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)"></div>
+      <div class="field"><label>Gäller butik</label>
+        <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);" onchange="setAdminField(${pi},'butik',this.value)">
+          <option value="bada" ${(!p.butik||p.butik==='bada')?'selected':''}>Båda butikerna</option>
+          <option value="varmdo" ${p.butik==='varmdo'?'selected':''}>Endast Värmdö</option>
+          <option value="akersberga" ${p.butik==='akersberga'?'selected':''}>Endast Åkersberga</option>
+        </select>
+      </div>
       <div class="row2">
         <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)"></div>
         <div class="field"><label>Slutdatum</label><input type="date" value="${p.slut}" oninput="setAdminField(${pi},'slut',this.value)"></div>
@@ -674,7 +718,14 @@ function renderAdmin(){
   html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>
     <div class="receipt">
       <button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button>
-      <div style="height:10px"></div>
+      <div style="height:14px"></div>
+      <div class="field"><label>A4 för butik</label>
+        <select id="a4ButikFilter" style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);">
+          <option value="bada">Båda butikerna</option>
+          <option value="varmdo">Endast Värmdö</option>
+          <option value="akersberga">Endast Åkersberga</option>
+        </select>
+      </div>
       <button class="secondary" style="width:100%;" onclick="openA4()">Öppna A4-sammanfattning</button>
     </div>
     <div id="adminResult"></div>`;
@@ -688,7 +739,7 @@ function collectAdminConfig(){
   return {
     deptName, monthName,
     periods: state.adminPeriods.map(p => ({
-      namn: p.namn, start: p.start, slut: p.slut,
+      namn: p.namn, start: p.start, slut: p.slut, butik: p.butik||'bada',
       steg: p.steg.filter(s=>s.namn && s.krav!=='' && s.procent!=='').map(s=>({namn:s.namn, krav:Number(s.krav), procent:Number(s.procent)})),
       kpi: (p.kpiOn && p.kpiKrav && p.kpiFor) ? {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor} : null,
       bonusar: (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)})),
@@ -739,7 +790,7 @@ function buildA4Html(full){
     const varning = p.varningText ? `<p class="warning">${esc(p.varningText)}</p>` : '';
 
     return `<div class="period-section">
-      <p class="period-label">${esc(p.namn)}${p.start&&p.slut ? ' <span class="dates">('+p.start+' – '+p.slut+')</span>' : ''}</p>
+      <p class="period-label">${esc(p.namn)}${p.start&&p.slut ? ' <span class="dates">('+p.start+' – '+p.slut+')</span>' : ''}${p.butik && p.butik!=='bada' ? ' <span class="dates">— '+(p.butik==='varmdo'?'Värmdö':'Åkersberga')+'</span>' : ''}</p>
       <table class="tbl"><thead><tr><th>Provisionsnivå</th><th>Dagssnitt</th><th>Procent provision</th></tr></thead>
         <tbody>${stegRows}</tbody></table>
       ${kpiTable}
@@ -783,7 +834,9 @@ function buildA4Html(full){
 
 function openA4(){
   const full = collectAdminConfig();
-  if(!full.periods.length){ alert('Lägg till minst en period.'); return; }
+  const filterVal = (document.getElementById('a4ButikFilter')||{}).value || 'bada';
+  full.periods = full.periods.filter(p => filterVal==='bada' || !p.butik || p.butik==='bada' || p.butik===filterVal);
+  if(!full.periods.length){ alert('Inga perioder matchar det valda filtret.'); return; }
   upsertAdminHistory();
   const html = buildA4Html(full);
   const w = window.open('', '_blank');
