@@ -22,7 +22,7 @@
     --bad:#B4523B;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0; padding:0; background:var(--paper-dim); color:var(--ink); font-family:'Work Sans',sans-serif; min-height:100vh;}
+  html,body{margin:0; padding:0; background:var(--paper-dim); color:var(--ink); font-family:'Work Sans',sans-serif; min-height:100vh; overflow-x:hidden;}
   .num{font-family:'IBM Plex Mono',monospace;}
 
   #app{max-width:480px; margin:0 auto; padding:20px 16px 100px; min-height:100vh;}
@@ -97,7 +97,8 @@
   .period-block{border:1px dashed var(--line); border-radius:6px; padding:14px; margin-bottom:14px;}
   .period-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
   .period-head strong{font-size:14px;}
-  .steg-row{display:grid; grid-template-columns:2fr 1fr 1fr auto; gap:8px; margin-bottom:8px; align-items:center;}
+  .steg-row{display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto; gap:6px; margin-bottom:8px; align-items:center;}
+  .steg-row input{width:100%; min-width:0; padding:9px 8px; border:1px solid var(--line); border-radius:4px; font-size:13px; font-family:'IBM Plex Mono',monospace; background:var(--paper);}
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .checkbox-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px;}
   .special-block{border-top:1px dashed var(--line); margin-top:10px; padding-top:10px;}
@@ -151,7 +152,7 @@ function addAdminPeriod(){
     namn:'Period ' + (state.adminPeriods.length+1), start:'', slut:'',
     steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'',
-    bonusOn:false, bonusKrav:'', bonusProcent:'',
+    bonusar:[],
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
   });
   render();
@@ -169,6 +170,12 @@ function setAdminField(pi, field, value){ state.adminPeriods[pi][field] = value;
 window.setAdminField = setAdminField;
 function setAdminSteg(pi, si, field, value){ state.adminPeriods[pi].steg[si][field] = value; }
 window.setAdminSteg = setAdminSteg;
+function addAdminBonus(pi){ state.adminPeriods[pi].bonusar.push({typ:'antal', namn:'', krav:'', bonusProcent:''}); render(); }
+window.addAdminBonus = addAdminBonus;
+function removeAdminBonus(pi,bi){ state.adminPeriods[pi].bonusar.splice(bi,1); render(); }
+window.removeAdminBonus = removeAdminBonus;
+function setAdminBonus(pi,bi,field,value){ state.adminPeriods[pi].bonusar[bi][field] = value; }
+window.setAdminBonus = setAdminBonus;
 
 function generateAdminLink(){
   const monthName = document.getElementById('adminMonthName').value || 'Budget';
@@ -181,7 +188,8 @@ function generateAdminLink(){
         steg:p.steg.filter(s=>s.namn && s.krav!=='' && s.procent!=='').map(s=>({namn:s.namn, krav:Number(s.krav), procent:Number(s.procent)}))
       };
       if(p.kpiOn && p.kpiKrav && p.kpiFor){ period.kpi = {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor}; }
-      if(p.bonusOn && p.bonusKrav && p.bonusProcent){ period.tjanstebonus = {tjansterPerDag:Number(p.bonusKrav), bonusProcent:Number(p.bonusProcent)}; }
+      const bonusar = (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)}));
+      if(bonusar.length){ period.bonusar = bonusar; }
       if(p.specialOn && p.specialSnitt){ period.specialregel = {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)}; }
       return period;
     })
@@ -218,8 +226,10 @@ function computePeriodStats(period, entries){
   const dagar = es.length;
   const totalTB = es.reduce((s,e)=>s+Number(e.tb||0),0);
   const totalTjanster = es.reduce((s,e)=>s+Number(e.tjanster||0),0);
+  const totalTjTB = es.reduce((s,e)=>s+Number(e.tjTb||0),0);
   const snitt = dagar ? totalTB/dagar : 0;
   const tjSnitt = dagar ? totalTjanster/dagar : 0;
+  const tjVarde = totalTjanster ? totalTjTB/totalTjanster : 0;
 
   const steg = (period.steg||[]).slice().sort((a,b)=>a.krav-b.krav);
   let kpiBlocked = false;
@@ -247,16 +257,16 @@ function computePeriodStats(period, entries){
     provision = totalTB*sr.procentHela/100 + over*sr.procentOver/100;
   }
 
-  let bonusActive = false, bonusProcent = 0, bonusBelopp = 0;
-  const tb = period.tjanstebonus;
-  if(tb && dagar>0 && tjSnitt >= tb.tjansterPerDag){
-    bonusActive = true;
-    bonusProcent = tb.bonusProcent;
-    bonusBelopp = totalTB * tb.bonusProcent/100;
-    provision += bonusBelopp;
-  }
+  const bonusar = (period.bonusar||[]).map(b => {
+    const matt = b.typ === 'varde' ? tjVarde : tjSnitt;
+    const active = dagar > 0 && matt >= b.krav;
+    const belopp = active ? totalTB * b.bonusProcent/100 : 0;
+    if(active) provision += belopp;
+    return { ...b, active, belopp, matt };
+  });
+  const bonusBeloppTotal = bonusar.reduce((s,b)=>s+b.belopp,0);
 
-  return { dagar, totalTB, totalTjanster, snitt, tjSnitt, currentTier, nextTier, procent, provision, kpiBlocked, specialActive, bonusActive, bonusProcent, bonusBelopp, kravForNext: nextTier ? nextTier.krav : (sr && !specialActive ? sr.snittKrav : null) };
+  return { dagar, totalTB, totalTjanster, totalTjTB, snitt, tjSnitt, tjVarde, currentTier, nextTier, procent, provision, kpiBlocked, specialActive, bonusar, bonusBeloppTotal, kravForNext: nextTier ? nextTier.krav : (sr && !specialActive ? sr.snittKrav : null) };
 }
 
 function applyCode(raw){
@@ -347,6 +357,7 @@ function renderIdag(cfg, entries){
       <div class="field"><label>Datum</label><input type="date" id="fDate" value="${today}" required></div>
       <div class="field"><label>TB (kr)</label><input type="number" id="fTb" inputmode="decimal" placeholder="0" required></div>
       <div class="field"><label>Antal tjänster</label><input type="number" id="fTj" inputmode="numeric" placeholder="0" required></div>
+      <div class="field"><label>TB från tjänster (kr)</label><input type="number" id="fTjTb" inputmode="decimal" placeholder="0"></div>
       <button class="primary" type="submit">Spara pass</button>
     </form>
   </div>`;
@@ -357,9 +368,10 @@ function addEntry(ev){
   const date = document.getElementById('fDate').value;
   const tb = document.getElementById('fTb').value;
   const tj = document.getElementById('fTj').value;
+  const tjTb = document.getElementById('fTjTb').value;
   if(!date) return false;
   const entries = loadEntries().filter(e=>e.date!==date);
-  entries.push({date, tb:Number(tb), tjanster:Number(tj)});
+  entries.push({date, tb:Number(tb), tjanster:Number(tj), tjTb:Number(tjTb||0)});
   entries.sort((a,b)=>a.date.localeCompare(b.date));
   saveEntries(entries);
   state.tab = 'oversikt';
@@ -394,7 +406,7 @@ function renderOversikt(cfg, entries){
         <div class="progress-label">${fmt(nextGap)} kr/dag kvar till nästa nivå (${fmt(st.kravForNext)} kr)</div>
       ` : ''}
       ${st.kpiBlocked ? `<div class="kpi-warn">Tjänstekrav (≥${p.kpi.tjansterPerDag}/dag) ej uppnått — högsta nivån ${p.kpi.kravFor} kräver detta.</div>` : ''}
-      ${p.tjanstebonus ? `<div class="row"><span>Tjänstebonus (≥${p.tjanstebonus.tjansterPerDag}/dag → +${p.tjanstebonus.bonusProcent}%)</span><span class="v" style="color:${st.bonusActive?'var(--good)':'var(--ink-soft)'}">${st.bonusActive ? '+'+fmt(st.bonusBelopp)+' kr' : 'Ej uppnått'}</span></div>` : ''}
+      ${(st.bonusar||[]).map(b => `<div class="row"><span>${b.namn || (b.typ==='varde'?'Tjänstevärde':'Tjänster/dag')} (≥${fmt(b.krav)}${b.typ==='varde'?' kr':'/dag'} → +${b.bonusProcent}%)</span><span class="v" style="color:${b.active?'var(--good)':'var(--ink-soft)'}">${b.active ? '+'+fmt(b.belopp)+' kr' : 'Ej uppnått'}</span></div>`).join('')}
       <hr class="dash">
       <div class="row"><span>Uppskattad provision</span><span class="v">${fmt(st.provision)} kr</span></div>
     </div>`;
@@ -468,13 +480,14 @@ window.backFromAdmin = backFromAdmin;
 function renderAdmin(){
   if(!state.adminPeriods.length){ state.adminPeriods.push({
     namn:'Period 1', start:'', slut:'', steg:[{namn:'Brons', krav:'', procent:''}],
-    kpiOn:false, kpiKrav:'', kpiFor:'', bonusOn:false, bonusKrav:'', bonusProcent:'',
+    kpiOn:false, kpiKrav:'', kpiFor:'', bonusar:[],
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
   }); }
 
   let html = `<div class="receipt">
     <h2>Admin — bygg månadens budget <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
     <div class="field"><label>Namn (visas i appen)</label><input id="adminMonthName" placeholder="t.ex. Juli 2026"></div>
+    <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input id="adminDeptName" placeholder="t.ex. Tech"></div>
   </div>`;
 
   state.adminPeriods.forEach((p, pi) => {
@@ -506,17 +519,27 @@ function renderAdmin(){
           <div class="field"><label>Gäller vilket steg</label><input value="${p.kpiFor}" oninput="setAdminField(${pi},'kpiFor',this.value)" placeholder="t.ex. Guld"></div>
         </div>` : ''}
 
-      <div class="checkbox-row">
-        <input type="checkbox" id="bonus${pi}" ${p.bonusOn?'checked':''} onchange="toggleAdminField(${pi},'bonusOn')">
-        <label for="bonus${pi}">Tjänstebonus (extra % utöver TB-procenten)</label>
-      </div>
-      ${p.bonusOn ? `
-        <div class="row2" style="margin-top:8px;">
-          <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.bonusKrav}" oninput="setAdminField(${pi},'bonusKrav',this.value)"></div>
-          <div class="field"><label>Extra procentenheter</label><input type="number" value="${p.bonusProcent}" oninput="setAdminField(${pi},'bonusProcent',this.value)"></div>
-        </div>` : ''}
+      <label style="font-size:12px; color:var(--ink-soft); display:block; margin:14px 0 6px;">Bonusar (extra % utöver TB-procenten)</label>
+      ${(p.bonusar||[]).map((b,bi)=>`
+        <div class="special-block" style="margin-top:0; border-top:none; padding-top:0;">
+          <div class="row2">
+            <div class="field"><label>Mätvärde</label>
+              <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--paper);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
+                <option value="antal" ${b.typ==='antal'?'selected':''}>Tjänster/dag (antal)</option>
+                <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
+              </select>
+            </div>
+            <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" placeholder="t.ex. Tjänstesnitt"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)"></div>
+            <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)"></div>
+          </div>
+          <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
+        </div>`).join('')}
+      <button class="secondary" onclick="addAdminBonus(${pi})">+ Lägg till bonus</button>
 
-      <div class="checkbox-row">
+      <div class="checkbox-row" style="margin-top:14px;">
         <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
         <label for="special${pi}">Specialregel vid högt snitt</label>
       </div>
@@ -528,15 +551,136 @@ function renderAdmin(){
             <div class="field"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)"></div>
           </div>
         </div>` : ''}
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="a4${pi}" ${p.a4On?'checked':''} onchange="toggleAdminField(${pi},'a4On')">
+        <label for="a4${pi}">Extra text för A4-utskriften (valfritt)</label>
+      </div>
+      ${p.a4On ? `
+        <div class="special-block">
+          <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)">${p.tjanstinfoText||''}</textarea></div>
+          <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)">${p.tavlingText||''}</textarea></div>
+          <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
+        </div>` : ''}
     </div>`;
   });
 
   html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>
-    <div class="receipt"><button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button></div>
+    <div class="receipt">
+      <button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button>
+      <div style="height:10px"></div>
+      <button class="secondary" style="width:100%;" onclick="openA4()">Öppna A4-sammanfattning</button>
+    </div>
     <div id="adminResult"></div>`;
 
   return html;
 }
+
+function collectAdminConfig(){
+  const deptName = (document.getElementById('adminDeptName')||{}).value || '';
+  const monthName = (document.getElementById('adminMonthName')||{}).value || 'Budget';
+  return {
+    deptName, monthName,
+    periods: state.adminPeriods.map(p => ({
+      namn: p.namn, start: p.start, slut: p.slut,
+      steg: p.steg.filter(s=>s.namn && s.krav!=='' && s.procent!=='').map(s=>({namn:s.namn, krav:Number(s.krav), procent:Number(s.procent)})),
+      kpi: (p.kpiOn && p.kpiKrav && p.kpiFor) ? {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor} : null,
+      bonusar: (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)})),
+      specialregel: (p.specialOn && p.specialSnitt) ? {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)} : null,
+      tjanstinfoText: p.a4On ? (p.tjanstinfoText||'') : '',
+      tavlingText: p.a4On ? (p.tavlingText||'') : '',
+      varningText: p.a4On ? (p.varningText||'') : ''
+    }))
+  };
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>'); }
+
+function buildA4Html(full){
+  const sections = full.periods.map(p => {
+    const stegSorted = (p.steg||[]).slice().sort((a,b)=>b.krav-a.krav);
+    const stegRows = stegSorted.map(s=>`<tr><td>${esc(s.namn)}</td><td>${s.krav.toLocaleString('sv-SE')} kr</td><td>${s.procent}%</td></tr>`).join('');
+
+    let kpiTable = '';
+    if((p.bonusar||[]).length){
+      const rows = p.bonusar.map(b => {
+        const label = b.namn || (b.typ==='varde' ? 'Tjänstevärde' : 'Tjänster');
+        const matt = b.typ==='varde' ? `${b.krav.toLocaleString('sv-SE')} kr/tjänst` : `${b.krav} st/dag`;
+        return `<tr><td>${esc(label)}</td><td>${matt}</td><td>+${b.bonusProcent}%</td></tr>`;
+      }).join('');
+      kpiTable = `<table class="tbl"><thead><tr><th>KPI</th><th>Antal/procent</th><th>Procent provision</th></tr></thead>
+        <tbody>${rows}</tbody></table>`;
+    }
+
+    let kravText = '';
+    if(p.kpi){
+      kravText = `<p class="note"><strong>Tjänstekrav:</strong> för att kvalificera dig för nivån ${esc(p.kpi.kravFor)} måste du under perioden snitta minst ${p.kpi.tjansterPerDag} tjänster per arbetad dag.</p>`;
+    }
+
+    let specialText = '';
+    if(p.specialregel){
+      specialText = `
+        <p class="section-label">${p.specialregel.procentHela}% på hela periodens TB</p>
+        <p class="note">Om du under perioden har ett genomsnittligt TB på minst ${p.specialregel.snittKrav.toLocaleString('sv-SE')} kr per arbetad dag, får du ${p.specialregel.procentHela}% provision på hela periodens TB istället för ordinarie stege.</p>
+        <p class="section-label">${p.specialregel.procentOver}% på TB över gränsen</p>
+        <p class="note">När du har uppnått snittet på ${p.specialregel.snittKrav.toLocaleString('sv-SE')} kr i TB per arbetad dag får du dessutom ${p.specialregel.procentOver}% provision på allt TB som överstiger snittkravet.</p>`;
+    }
+
+    const tjanstinfo = p.tjanstinfoText ? `<p class="section-label">Vad räknas som en tjänst?</p><p class="note">${esc(p.tjanstinfoText)}</p>` : '';
+    const tavling = p.tavlingText ? `<p class="comp-title">Tävling!</p><p class="note">${esc(p.tavlingText)}</p>` : '';
+    const varning = p.varningText ? `<p class="warning">${esc(p.varningText)}</p>` : '';
+
+    return `<div class="period-section">
+      <p class="period-label">${esc(p.namn)}${p.start&&p.slut ? ' <span class="dates">('+p.start+' – '+p.slut+')</span>' : ''}</p>
+      <table class="tbl"><thead><tr><th>Provisionsnivå</th><th>Dagssnitt</th><th>Procent provision</th></tr></thead>
+        <tbody>${stegRows}</tbody></table>
+      ${kpiTable}
+      ${kravText}
+      ${specialText}
+      ${tjanstinfo}
+      ${tavling}
+      ${varning}
+    </div>`;
+  }).join('<div class="divider"></div>');
+
+  return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>${esc(full.deptName||'Provisionsmodell')}</title>
+  <style>
+    @page{ size:A4; margin:18mm; }
+    *{box-sizing:border-box;}
+    body{font-family:'Segoe UI',Arial,sans-serif; color:#1a1a1a; margin:0;}
+    .title{font-size:46px; font-weight:300; margin:0 0 4px;}
+    .subtitle{font-size:16px; font-weight:700; margin:0 0 16px;}
+    .period-label{font-weight:700; font-size:16px; margin:18px 0 4px;}
+    .dates{font-weight:400; color:#555; font-size:14px;}
+    table.tbl{width:100%; border-collapse:collapse; margin:8px 0 10px;}
+    table.tbl th, table.tbl td{border:1px solid #000; padding:8px 10px; text-align:left; font-size:14px;}
+    table.tbl thead th{background:#d9d9d9;}
+    .note{font-size:14px; margin:4px 0 10px; max-width:180mm;}
+    .section-label{color:#888; font-size:13px; margin:12px 0 2px;}
+    .comp-title{color:#e8a63c; font-weight:700; margin:14px 0 2px;}
+    .warning{color:#c0392b; font-weight:600; margin-top:14px;}
+    .divider{border-top:1px solid #ccc; margin:20px 0;}
+    .print-bar{margin-bottom:20px;}
+    .print-bar button{padding:10px 18px; font-size:14px; cursor:pointer;}
+    @media print{ .print-bar{display:none;} }
+  </style></head>
+  <body>
+    <div class="print-bar"><button onclick="window.print()">Skriv ut / Spara som PDF</button></div>
+    <div class="title">${esc(full.deptName||'')}</div>
+    <div class="subtitle">${esc(full.monthName||'')}</div>
+    ${sections}
+  </body></html>`;
+}
+
+function openA4(){
+  const full = collectAdminConfig();
+  if(!full.periods.length){ alert('Lägg till minst en period.'); return; }
+  const html = buildA4Html(full);
+  const w = window.open('', '_blank');
+  if(!w){ alert('Kunde inte öppna nytt fönster — kolla popup-blockeraren.'); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+window.openA4 = openA4;
 
 function submitCode(){
   const raw = document.getElementById('codeInput').value;
