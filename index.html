@@ -116,6 +116,52 @@ function loadEntries(){ try{ return JSON.parse(localStorage.getItem(STORE_ENTRIE
 function saveEntries(list){ localStorage.setItem(STORE_ENTRIES, JSON.stringify(list)); }
 function loadKundklubb(){ try{ return JSON.parse(localStorage.getItem(STORE_KUNDKLUBB)||'{}'); }catch(e){ return {}; } }
 function saveKundklubb(obj){ localStorage.setItem(STORE_KUNDKLUBB, JSON.stringify(obj)); }
+const STORE_ADMIN_HISTORY = 'llAdminHistory';
+function loadAdminHistory(){ try{ return JSON.parse(localStorage.getItem(STORE_ADMIN_HISTORY)||'[]'); }catch(e){ return []; } }
+function saveAdminHistory(list){ localStorage.setItem(STORE_ADMIN_HISTORY, JSON.stringify(list)); }
+function upsertAdminHistory(){
+  const monthName = (state.adminMonthName||'').trim();
+  if(!monthName) return;
+  const history = loadAdminHistory();
+  const entry = {
+    id: state.adminEditingId || ('h'+Date.now()),
+    monthName, deptName: state.adminDeptName||'',
+    periods: JSON.parse(JSON.stringify(state.adminPeriods)),
+    savedAt: new Date().toISOString()
+  };
+  const idx = history.findIndex(h => h.id === entry.id);
+  if(idx>=0){ history[idx] = entry; } else { history.unshift(entry); }
+  saveAdminHistory(history);
+  state.adminEditingId = entry.id;
+}
+function loadHistoryEntry(id){
+  const entry = loadAdminHistory().find(h=>h.id===id);
+  if(!entry) return;
+  state.adminPeriods = JSON.parse(JSON.stringify(entry.periods));
+  state.adminMonthName = entry.monthName;
+  state.adminDeptName = entry.deptName;
+  state.adminEditingId = entry.id;
+  state.adminSubTab = 'builder';
+  render();
+}
+window.loadHistoryEntry = loadHistoryEntry;
+function deleteHistoryEntry(id){
+  if(!confirm('Ta bort den här sparade provisionen?')) return;
+  saveAdminHistory(loadAdminHistory().filter(h=>h.id!==id));
+  render();
+}
+window.deleteHistoryEntry = deleteHistoryEntry;
+function newAdminProvision(){
+  state.adminPeriods = [];
+  state.adminMonthName = '';
+  state.adminDeptName = '';
+  state.adminEditingId = null;
+  state.adminSubTab = 'builder';
+  render();
+}
+window.newAdminProvision = newAdminProvision;
+function setAdminSubTab(t){ state.adminSubTab = t; render(); }
+window.setAdminSubTab = setAdminSubTab;
 function periodKey(p){ return (p.namn||'') + '|' + (p.start||'') + '|' + (p.slut||''); }
 function toggleKundklubb(key){
   const kk = loadKundklubb();
@@ -135,7 +181,7 @@ function decodeConfig(code){
 }
 
 const ADMIN_PASSWORD = '3454772';
-let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[] };
+let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[], adminMonthName:'', adminDeptName:'', adminSubTab:'builder', adminEditingId:null };
 
 function openAdmin(){
   if(state.adminUnlocked){ state.tab='admin'; render(); return; }
@@ -183,8 +229,9 @@ function setAdminBonus(pi,bi,field,value){ state.adminPeriods[pi].bonusar[bi][fi
 window.setAdminBonus = setAdminBonus;
 
 function generateAdminLink(){
-  const monthName = document.getElementById('adminMonthName').value || 'Budget';
+  const monthName = (state.adminMonthName||'').trim() || 'Budget';
   if(!state.adminPeriods.length){ alert('Lägg till minst en period.'); return; }
+  upsertAdminHistory();
   const cfg = {
     namn: monthName,
     periods: state.adminPeriods.map(p => {
@@ -498,6 +545,36 @@ function backFromAdmin(){ state.tab = 'oversikt'; render(); }
 window.backFromAdmin = backFromAdmin;
 
 function renderAdmin(){
+  const history = loadAdminHistory();
+  const subTabBar = `<div class="receipt" style="padding:8px; display:flex; gap:8px;">
+    <button class="secondary" style="flex:1; ${state.adminSubTab==='builder'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="setAdminSubTab('builder')">Bygg${state.adminEditingId?' (redigerar)':' ny'}</button>
+    <button class="secondary" style="flex:1; ${state.adminSubTab==='history'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="setAdminSubTab('history')">Tidigare (${history.length})</button>
+  </div>`;
+
+  if(state.adminSubTab === 'history'){
+    let html = `<div class="receipt">
+      <h2>Admin <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
+    </div>` + subTabBar;
+    if(!history.length){
+      html += `<div class="receipt"><div class="empty">Inga sparade provisioner ännu — de sparas automatiskt när du genererar en länk eller A4.</div></div>`;
+    } else {
+      history.forEach(h => {
+        const date = new Date(h.savedAt);
+        const dateStr = date.toLocaleDateString('sv-SE') + ' ' + date.toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
+        html += `<div class="receipt">
+          <div class="row" style="align-items:center;">
+            <span><strong>${h.monthName}</strong>${h.deptName ? ' · '+h.deptName : ''}<br><span style="font-size:12px; color:var(--ink-soft);">${h.periods.length} period(er) · sparad ${dateStr}</span></span>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="secondary" style="flex:1;" onclick="loadHistoryEntry('${h.id}')">Redigera</button>
+            <button class="btn-small" onclick="deleteHistoryEntry('${h.id}')">Ta bort</button>
+          </div>
+        </div>`;
+      });
+    }
+    return html;
+  }
+
   if(!state.adminPeriods.length){ state.adminPeriods.push({
     namn:'Period 1', start:'', slut:'', steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'', bonusar:[],
@@ -505,10 +582,11 @@ function renderAdmin(){
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
   }); }
 
-  let html = `<div class="receipt">
+  let html = subTabBar + `<div class="receipt">
     <h2>Admin — bygg månadens budget <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
-    <div class="field"><label>Namn (visas i appen)</label><input id="adminMonthName" placeholder="t.ex. Juli 2026"></div>
-    <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input id="adminDeptName" placeholder="t.ex. Tech"></div>
+    <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" placeholder="t.ex. Juli 2026"></div>
+    <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
+    <button class="btn-small" style="color:var(--ink-soft)" onclick="newAdminProvision()">+ Starta ny tom provision</button>
   </div>`;
 
   state.adminPeriods.forEach((p, pi) => {
@@ -605,8 +683,8 @@ function renderAdmin(){
 }
 
 function collectAdminConfig(){
-  const deptName = (document.getElementById('adminDeptName')||{}).value || '';
-  const monthName = (document.getElementById('adminMonthName')||{}).value || 'Budget';
+  const deptName = state.adminDeptName || '';
+  const monthName = (state.adminMonthName||'').trim() || 'Budget';
   return {
     deptName, monthName,
     periods: state.adminPeriods.map(p => ({
@@ -706,6 +784,7 @@ function buildA4Html(full){
 function openA4(){
   const full = collectAdminConfig();
   if(!full.periods.length){ alert('Lägg till minst en period.'); return; }
+  upsertAdminHistory();
   const html = buildA4Html(full);
   const w = window.open('', '_blank');
   if(!w){ alert('Kunde inte öppna nytt fönster — kolla popup-blockeraren.'); return; }
