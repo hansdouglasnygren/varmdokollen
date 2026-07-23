@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lonekollen-light-v3';
+const CACHE_NAME = 'lonekollen-light-v4';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
