@@ -143,6 +143,7 @@ function upsertAdminHistory(){
   if(idx>=0){ history[idx] = entry; } else { history.unshift(entry); }
   saveAdminHistory(history);
   state.adminEditingId = entry.id;
+  state.adminSubTab = 'edit';
 }
 function loadHistoryEntry(id){
   const entry = loadAdminHistory().find(h=>h.id===id);
@@ -152,7 +153,7 @@ function loadHistoryEntry(id){
   state.adminDeptName = entry.deptName;
   state.adminButik = entry.butik||'';
   state.adminEditingId = entry.id;
-  state.adminSubTab = 'builder';
+  state.adminSubTab = 'edit';
   render();
 }
 window.loadHistoryEntry = loadHistoryEntry;
@@ -168,11 +169,15 @@ function newAdminProvision(){
   state.adminDeptName = '';
   state.adminButik = '';
   state.adminEditingId = null;
-  state.adminSubTab = 'builder';
+  state.adminSubTab = 'new';
   render();
 }
 window.newAdminProvision = newAdminProvision;
-function setAdminSubTab(t){ state.adminSubTab = t; render(); }
+function setAdminSubTab(t){
+  if(t === 'new'){ newAdminProvision(); return; }
+  state.adminSubTab = t;
+  render();
+}
 window.setAdminSubTab = setAdminSubTab;
 function periodKey(p){ return (p.namn||'') + '|' + (p.start||'') + '|' + (p.slut||''); }
 function toggleKundklubb(key){
@@ -193,7 +198,7 @@ function decodeConfig(code){
 }
 
 const ADMIN_PASSWORD = '3454772';
-let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[], adminMonthName:'', adminDeptName:'', adminButik:'', adminSubTab:'builder', adminEditingId:null };
+let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[], adminMonthName:'', adminDeptName:'', adminButik:'', adminSubTab:'new', adminEditingId:null };
 
 function openAdmin(){
   if(state.adminUnlocked){ state.tab='admin'; render(); return; }
@@ -599,9 +604,10 @@ window.backFromAdmin = backFromAdmin;
 
 function renderAdmin(){
   const history = loadAdminHistory();
+  const isEditing = state.adminSubTab === 'edit';
   const subTabBar = `<div class="receipt" style="padding:8px; display:flex; gap:8px;">
-    <button class="secondary" style="flex:1; ${state.adminSubTab==='builder'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="setAdminSubTab('builder')">Bygg${state.adminEditingId?' (redigerar)':' ny'}</button>
-    <button class="secondary" style="flex:1; ${state.adminSubTab==='history'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="setAdminSubTab('history')">Tidigare (${history.length})</button>
+    <button class="secondary" style="flex:1; ${(state.adminSubTab==='new')?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="setAdminSubTab('new')">+ Ny provisionsmodell</button>
+    <button class="secondary" style="flex:1; ${state.adminSubTab==='history'?'background:var(--navy); color:#fff; border-color:var(--navy);':''}" onclick="setAdminSubTab('history')">Tidigare provisionsmodeller (${history.length})</button>
   </div>`;
 
   if(state.adminSubTab === 'history'){
@@ -609,14 +615,15 @@ function renderAdmin(){
       <h2>Admin <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
     </div>` + subTabBar;
     if(!history.length){
-      html += `<div class="receipt"><div class="empty">Inga sparade provisioner ännu — de sparas automatiskt när du genererar en länk eller A4.</div></div>`;
+      html += `<div class="receipt"><div class="empty">Inga sparade provisionsmodeller ännu — de sparas automatiskt när du genererar en länk eller A4.</div></div>`;
     } else {
       history.forEach(h => {
         const date = new Date(h.savedAt);
         const dateStr = date.toLocaleDateString('sv-SE') + ' ' + date.toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
-        html += `<div class="receipt">
+        const isThisOne = state.adminEditingId === h.id && isEditing;
+        html += `<div class="receipt" style="${isThisOne?'border:2px solid var(--navy);':''}">
           <div class="row" style="align-items:center;">
-            <span><strong>${h.monthName}</strong>${h.butik ? ' · '+STORE_LABELS[h.butik] : ''}${h.deptName ? ' · '+h.deptName : ''}<br><span style="font-size:12px; color:var(--ink-soft);">${h.periods.length} period(er) · sparad ${dateStr}</span></span>
+            <span><strong>${h.monthName}</strong>${h.butik ? ' · '+STORE_LABELS[h.butik] : ''}${h.deptName ? ' · '+h.deptName : ''}<br><span style="font-size:12px; color:var(--ink-soft);">${h.periods.length} period(er) · sparad ${dateStr}</span>${isThisOne ? '<br><span style="font-size:12px; color:var(--navy); font-weight:700;">Öppen för redigering just nu</span>' : ''}</span>
           </div>
           <div style="display:flex; gap:8px; margin-top:10px;">
             <button class="secondary" style="flex:1;" onclick="loadHistoryEntry('${h.id}')">Redigera</button>
@@ -635,7 +642,11 @@ function renderAdmin(){
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
   }); }
 
-  let html = subTabBar + `<div class="receipt">
+  let html = subTabBar;
+  html += isEditing
+    ? `<div class="banner" style="background:var(--navy);">Redigerar tidigare provisionsmodell: ${state.adminMonthName||'(namnlös)'}${state.adminButik?' · '+STORE_LABELS[state.adminButik]:''}</div>`
+    : `<div class="banner" style="background:var(--green);">Ny provisionsmodell</div>`;
+  html += `<div class="receipt">
     <h2>Admin — bygg månadens budget <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
     <div class="field"><label>Butik (denna provision gäller endast för vald butik)</label>
       <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);" onchange="state.adminButik=this.value">
@@ -646,7 +657,6 @@ function renderAdmin(){
     </div>
     <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" placeholder="t.ex. Juli 2026"></div>
     <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
-    <button class="btn-small" style="color:var(--ink-soft)" onclick="newAdminProvision()">+ Starta ny tom provision</button>
   </div>`;
 
   state.adminPeriods.forEach((p, pi) => {
