@@ -108,11 +108,22 @@
 <script>
 const STORE_CONFIG = 'llConfig';
 const STORE_ENTRIES = 'llEntries';
+const STORE_KUNDKLUBB = 'llKundklubb';
 
 function loadConfig(){ try{ return JSON.parse(localStorage.getItem(STORE_CONFIG)||'null'); }catch(e){ return null; } }
 function saveConfig(cfg){ localStorage.setItem(STORE_CONFIG, JSON.stringify(cfg)); }
 function loadEntries(){ try{ return JSON.parse(localStorage.getItem(STORE_ENTRIES)||'[]'); }catch(e){ return []; } }
 function saveEntries(list){ localStorage.setItem(STORE_ENTRIES, JSON.stringify(list)); }
+function loadKundklubb(){ try{ return JSON.parse(localStorage.getItem(STORE_KUNDKLUBB)||'{}'); }catch(e){ return {}; } }
+function saveKundklubb(obj){ localStorage.setItem(STORE_KUNDKLUBB, JSON.stringify(obj)); }
+function periodKey(p){ return (p.namn||'') + '|' + (p.start||'') + '|' + (p.slut||''); }
+function toggleKundklubb(key){
+  const kk = loadKundklubb();
+  kk[key] = !kk[key];
+  saveKundklubb(kk);
+  render();
+}
+window.toggleKundklubb = toggleKundklubb;
 
 function decodeConfig(code){
   try{
@@ -146,6 +157,7 @@ function addAdminPeriod(){
     steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'',
     bonusar:[],
+    kundklubbOn:false, kundklubbProcent:20,
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
   });
   render();
@@ -183,6 +195,7 @@ function generateAdminLink(){
       if(p.kpiOn && p.kpiKrav && p.kpiFor){ period.kpi = {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor}; }
       const bonusar = (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)}));
       if(bonusar.length){ period.bonusar = bonusar; }
+      if(p.kundklubbOn && p.kundklubbProcent!==''){ period.kundklubbskrav = Number(p.kundklubbProcent); }
       if(p.specialOn && p.specialSnitt){ period.specialregel = {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)}; }
       return period;
     })
@@ -214,7 +227,7 @@ function periodFor(dateStr, cfg){
   return (cfg.periods||[]).find(p => dateStr >= p.start && dateStr <= p.slut);
 }
 
-function computePeriodStats(period, entries){
+function computePeriodStats(period, entries, kundklubbMet){
   const es = entries.filter(e => e.date >= period.start && e.date <= period.slut);
   const dagar = es.length;
   const totalTB = es.reduce((s,e)=>s+Number(e.tb||0),0);
@@ -259,7 +272,10 @@ function computePeriodStats(period, entries){
   });
   const bonusBeloppTotal = bonusar.reduce((s,b)=>s+b.belopp,0);
 
-  return { dagar, totalTB, totalTjanster, totalTjTB, snitt, tjSnitt, tjVarde, currentTier, nextTier, procent, provision, kpiBlocked, specialActive, bonusar, bonusBeloppTotal, kravForNext: nextTier ? nextTier.krav : (sr && !specialActive ? sr.snittKrav : null) };
+  const kundklubbBlocked = !!(period.kundklubbskrav && !kundklubbMet);
+  if(kundklubbBlocked){ provision = 0; }
+
+  return { dagar, totalTB, totalTjanster, totalTjTB, snitt, tjSnitt, tjVarde, currentTier, nextTier, procent, provision, kpiBlocked, specialActive, bonusar, bonusBeloppTotal, kundklubbBlocked, kravForNext: nextTier ? nextTier.krav : (sr && !specialActive ? sr.snittKrav : null) };
 }
 
 function applyCode(raw){
@@ -377,10 +393,13 @@ window.addEntry = addEntry;
 function renderOversikt(cfg, entries){
   let html = '';
   const periods = cfg.periods||[];
+  const kundklubb = loadKundklubb();
   let totalProvision = 0, totalTB = 0, totalTj = 0;
 
   periods.forEach(p=>{
-    const st = computePeriodStats(p, entries);
+    const key = periodKey(p);
+    const kkMet = !!kundklubb[key];
+    const st = computePeriodStats(p, entries, kkMet);
     totalProvision += st.provision; totalTB += st.totalTB; totalTj += st.totalTjanster;
     const nextGap = st.kravForNext != null ? Math.max(0, st.kravForNext - st.snitt) : null;
     const progressPct = st.kravForNext ? Math.min(100, (st.snitt/st.kravForNext)*100) : 100;
@@ -400,6 +419,14 @@ function renderOversikt(cfg, entries){
       ` : ''}
       ${st.kpiBlocked ? `<div class="kpi-warn">Tjänstekrav (≥${p.kpi.tjansterPerDag}/dag) ej uppnått — högsta nivån ${p.kpi.kravFor} kräver detta.</div>` : ''}
       ${(st.bonusar||[]).map(b => `<div class="row"><span>${b.namn || (b.typ==='varde'?'Tjänstevärde':'Tjänster/dag')} (≥${fmt(b.krav)}${b.typ==='varde'?' kr':'/dag'} → +${b.bonusProcent}%)</span><span class="v" style="color:${b.active?'var(--green)':'var(--ink-soft)'}">${b.active ? '+'+fmt(b.belopp)+' kr' : 'Ej uppnått'}</span></div>`).join('')}
+      ${p.kundklubbskrav ? `
+        <hr class="dash">
+        <div class="checkbox-row">
+          <input type="checkbox" id="kk_${key}" ${kkMet?'checked':''} onchange="toggleKundklubb('${key}')">
+          <label for="kk_${key}">Jag har nått kundklubbskravet (≥${p.kundklubbskrav}%) denna period</label>
+        </div>
+        ${st.kundklubbBlocked ? `<div class="kpi-warn">Provisionen uteblir — kundklubbsrekryteringen ligger under ${p.kundklubbskrav}%.</div>` : ''}
+      ` : ''}
       <hr class="dash">
       <div class="row"><span>Uppskattad provision</span><span class="v">${fmt(st.provision)} kr</span></div>
     </div>`;
@@ -474,6 +501,7 @@ function renderAdmin(){
   if(!state.adminPeriods.length){ state.adminPeriods.push({
     namn:'Period 1', start:'', slut:'', steg:[{namn:'Brons', krav:'', procent:''}],
     kpiOn:false, kpiKrav:'', kpiFor:'', bonusar:[],
+    kundklubbOn:false, kundklubbProcent:20,
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialProcentOver:''
   }); }
 
@@ -532,6 +560,13 @@ function renderAdmin(){
         </div>`).join('')}
       <button class="secondary" onclick="addAdminBonus(${pi})">+ Lägg till bonus</button>
 
+      <div class="checkbox-row">
+        <input type="checkbox" id="kk${pi}" ${p.kundklubbOn?'checked':''} onchange="toggleAdminField(${pi},'kundklubbOn')">
+        <label for="kk${pi}">Kundklubbskrav (provisionen uteblir helt annars)</label>
+      </div>
+      ${p.kundklubbOn ? `
+        <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)"></div>` : ''}
+
       <div class="checkbox-row" style="margin-top:14px;">
         <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
         <label for="special${pi}">Specialregel vid högt snitt</label>
@@ -579,6 +614,7 @@ function collectAdminConfig(){
       steg: p.steg.filter(s=>s.namn && s.krav!=='' && s.procent!=='').map(s=>({namn:s.namn, krav:Number(s.krav), procent:Number(s.procent)})),
       kpi: (p.kpiOn && p.kpiKrav && p.kpiFor) ? {tjansterPerDag:Number(p.kpiKrav), kravFor:p.kpiFor} : null,
       bonusar: (p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>({typ:b.typ, namn:b.namn||'', krav:Number(b.krav), bonusProcent:Number(b.bonusProcent)})),
+      kundklubbskrav: (p.kundklubbOn && p.kundklubbProcent!=='') ? Number(p.kundklubbProcent) : null,
       specialregel: (p.specialOn && p.specialSnitt) ? {snittKrav:Number(p.specialSnitt), procentHela:Number(p.specialProcentHela||0), procentOver:Number(p.specialProcentOver||0)} : null,
       tjanstinfoText: p.a4On ? (p.tjanstinfoText||'') : '',
       tavlingText: p.a4On ? (p.tavlingText||'') : '',
@@ -621,6 +657,7 @@ function buildA4Html(full){
 
     const tjanstinfo = p.tjanstinfoText ? `<p class="section-label">Vad räknas som en tjänst?</p><p class="note">${esc(p.tjanstinfoText)}</p>` : '';
     const tavling = p.tavlingText ? `<p class="comp-title">Tävling!</p><p class="note">${esc(p.tavlingText)}</p>` : '';
+    const kundklubbVarning = p.kundklubbskrav ? `<p class="warning">Provisionen uteblir om kundklubbsrekryteringen ligger under ${p.kundklubbskrav}%.</p>` : '';
     const varning = p.varningText ? `<p class="warning">${esc(p.varningText)}</p>` : '';
 
     return `<div class="period-section">
@@ -632,6 +669,7 @@ function buildA4Html(full){
       ${specialText}
       ${tjanstinfo}
       ${tavling}
+      ${kundklubbVarning}
       ${varning}
     </div>`;
   }).join('<div class="divider"></div>');
