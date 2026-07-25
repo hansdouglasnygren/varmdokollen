@@ -259,7 +259,7 @@ function addAdminPeriod(){
   state.adminPeriods.push({
     namn:'Period ' + (state.adminPeriods.length+1), start:'', slut:'', butik:'bada',
     steg:[{namn:'Brons', krav:'', procent:''}],
-    tjanstekrav:[],
+    tjanstekravOn:false, tjanstekrav:[],
     bonusar:[],
     kundklubbOn:false, kundklubbProcent:20,
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialOverOn:false, specialProcentOver:''
@@ -694,7 +694,7 @@ function renderAdmin(){
 
   if(!state.adminPeriods.length){ state.adminPeriods.push({
     namn:'Period 1', start:'', slut:'', butik:'bada', steg:[{namn:'Brons', krav:'', procent:''}],
-    tjanstekrav:[], bonusar:[],
+    tjanstekravOn:false, tjanstekrav:[], bonusar:[],
     kundklubbOn:false, kundklubbProcent:20,
     specialOn:false, specialSnitt:'', specialProcentHela:'', specialOverOn:false, specialProcentOver:''
   }); }
@@ -741,24 +741,30 @@ function renderAdmin(){
       <button class="secondary" onclick="addAdminSteg(${pi})">+ Lägg till steg</button>
 
       <div class="toggle-panel">
-        <label style="font-size:12px; color:var(--ink-soft); display:block; margin:0 0 8px;">Tjänstekrav per steg (kräver visst antal tjänster/dag för att nå steget)</label>
-        ${(p.tjanstekrav||[]).map((k,ki)=>{
-          const stegOptions = (p.steg||[]).filter(s=>s.namn).map(s=>`<option value="${s.namn}" ${k.steg===s.namn?'selected':''}>${s.namn}</option>`).join('');
-          return `
-          <div class="row2" style="margin-bottom:8px;">
-            <div class="field"><label>Steg</label>
-              <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminKrav(${pi},${ki},'steg',this.value); render()">
-                <option value="">— Välj steg —</option>
-                ${stegOptions}
-              </select>
-            </div>
-            <div style="display:flex; gap:6px; align-items:end;">
-              <div class="field" style="flex:1;"><label>Tjänster/dag krävs</label><input type="number" value="${k.antal}" oninput="setAdminKrav(${pi},${ki},'antal',this.value)" onblur="refreshOverview()"></div>
-              <button class="btn-small" onclick="removeAdminKrav(${pi},${ki}); render()">✕</button>
-            </div>
-          </div>`;
-        }).join('')}
-        <button class="secondary" onclick="addAdminKrav(${pi})">+ Lägg till tjänstekrav</button>
+        <div class="checkbox-row">
+          <input type="checkbox" id="tk${pi}" ${(p.tjanstekravOn || (p.tjanstekrav||[]).length>0)?'checked':''} onchange="toggleAdminField(${pi},'tjanstekravOn')">
+          <label for="tk${pi}">Tjänstekrav per steg (kräver visst antal tjänster/dag för att nå steget)</label>
+        </div>
+        ${(p.tjanstekravOn || (p.tjanstekrav||[]).length>0) ? `
+        <div style="margin-top:10px;">
+          ${(p.tjanstekrav||[]).map((k,ki)=>{
+            const stegOptions = (p.steg||[]).filter(s=>s.namn).map(s=>`<option value="${s.namn}" ${k.steg===s.namn?'selected':''}>${s.namn}</option>`).join('');
+            return `
+            <div class="row2" style="margin-bottom:8px;">
+              <div class="field"><label>Steg</label>
+                <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminKrav(${pi},${ki},'steg',this.value); render()">
+                  <option value="">— Välj steg —</option>
+                  ${stegOptions}
+                </select>
+              </div>
+              <div style="display:flex; gap:6px; align-items:end;">
+                <div class="field" style="flex:1;"><label>Tjänster/dag krävs</label><input type="number" value="${k.antal}" oninput="setAdminKrav(${pi},${ki},'antal',this.value)" onblur="refreshOverview()"></div>
+                <button class="btn-small" onclick="removeAdminKrav(${pi},${ki}); render()">✕</button>
+              </div>
+            </div>`;
+          }).join('')}
+          <button class="secondary" onclick="addAdminKrav(${pi})">+ Lägg till tjänstekrav</button>
+        </div>` : ''}
       </div>
 
       <div class="toggle-panel">
