@@ -791,7 +791,7 @@ function renderAdmin(){
       <div class="toggle-panel">
         <div class="checkbox-row">
           <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
-          <label for="special${pi}">Fast procent på hela TB vid visst snitt</label>
+          <label for="special${pi}">Egen provisionsnivå vid högt dagssnitt (ersätter ordinarie stege)</label>
         </div>
         ${p.specialOn ? `
           <div class="special-block">
@@ -866,7 +866,7 @@ function renderAdminOverview(periods){
       ${stegSorted.map(s=>`<div class="row"><span>${s.namn}</span><span class="v">${Number(s.krav).toLocaleString('sv-SE')} kr/dag → ${s.procent}%</span></div>`).join('')}
       ${(p.tjanstekrav||[]).filter(k=>k.steg && k.antal!=='').map(k=>`<div class="row"><span>Tjänstekrav</span><span class="v">≥${k.antal}/dag för ${k.steg}</span></div>`).join('')}
       ${(p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>`<div class="row"><span>${b.namn||(b.typ==='varde'?'Tjänstevärde-bonus':'Tjänster-bonus')}</span><span class="v">≥${b.krav}${b.typ==='varde'?' kr/tj':'/dag'} → +${b.bonusProcent}%</span></div>`).join('')}
-      ${p.specialOn && p.specialSnitt ? `<div class="row"><span>Fast procent vid högt snitt</span><span class="v">≥${Number(p.specialSnitt).toLocaleString('sv-SE')} kr/dag → ${p.specialProcentHela||0}%${p.specialOverOn && p.specialProcentOver!=='' ? ' (+'+p.specialProcentOver+'% över gränsen)' : ''}</span></div>` : ''}
+      ${p.specialOn && p.specialSnitt ? `<div class="row"><span>Egen nivå vid högt snitt</span><span class="v">≥${Number(p.specialSnitt).toLocaleString('sv-SE')} kr/dag → ${p.specialProcentHela||0}%${p.specialOverOn && p.specialProcentOver!=='' ? ' (+'+p.specialProcentOver+'% över gränsen)' : ''}</span></div>` : ''}
       ${p.kundklubbOn && p.kundklubbProcent!=='' ? `<div class="row"><span>Kundklubbskrav</span><span class="v" style="color:var(--bad)">≥${p.kundklubbProcent}%, annars 0 kr</span></div>` : ''}
     </div>`;
   });
