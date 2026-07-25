@@ -715,7 +715,7 @@ function renderAdmin(){
           <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
         </select>
       </div>
-      <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" onblur="render()" placeholder="t.ex. Juli 2026"></div>
+      <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" onblur="refreshOverview()" placeholder="t.ex. Juli 2026"></div>
       <div class="field"><label>Butik/avdelning (rubrik på A4)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
     </div>
   </div>`;
@@ -725,17 +725,17 @@ function renderAdmin(){
     html += `<div class="receipt period-block">
       <div class="period-head"><strong>${p.namn || 'Period ' + (pi+1)}</strong>
         <button class="btn-small" onclick="removeAdminPeriod(${pi}); render()">Ta bort period</button></div>
-      <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)" onblur="render()"></div>
+      <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)" onblur="refreshOverview()"></div>
       <div class="row2">
-        <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)" onblur="render()"></div>
-        <div class="field"><label>Slutdatum</label><input type="date" value="${p.slut}" oninput="setAdminField(${pi},'slut',this.value)" onblur="render()"></div>
+        <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)" onblur="refreshOverview()"></div>
+        <div class="field"><label>Slutdatum</label><input type="date" value="${p.slut}" oninput="setAdminField(${pi},'slut',this.value)" onblur="refreshOverview()"></div>
       </div>
       <label style="font-size:12px; color:var(--ink-soft); display:block; margin:10px 0 6px;">Stege (kr/dag → procent)</label>
       ${p.steg.map((s,si)=>`
         <div class="steg-row">
-          <input placeholder="Namn (Brons)" value="${s.namn}" oninput="setAdminSteg(${pi},${si},'namn',this.value)" onblur="render()">
-          <input type="number" placeholder="kr/dag" value="${s.krav}" oninput="setAdminSteg(${pi},${si},'krav',this.value)" onblur="render()">
-          <input type="number" placeholder="%" value="${s.procent}" oninput="setAdminSteg(${pi},${si},'procent',this.value)" onblur="render()">
+          <input placeholder="Namn (Brons)" value="${s.namn}" oninput="setAdminSteg(${pi},${si},'namn',this.value)" onblur="refreshOverview()">
+          <input type="number" placeholder="kr/dag" value="${s.krav}" oninput="setAdminSteg(${pi},${si},'krav',this.value)" onblur="refreshOverview()">
+          <input type="number" placeholder="%" value="${s.procent}" oninput="setAdminSteg(${pi},${si},'procent',this.value)" onblur="refreshOverview()">
           <button class="btn-small" onclick="removeAdminSteg(${pi},${si}); render()">✕</button>
         </div>`).join('')}
       <button class="secondary" onclick="addAdminSteg(${pi})">+ Lägg till steg</button>
@@ -753,7 +753,7 @@ function renderAdmin(){
               </select>
             </div>
             <div style="display:flex; gap:6px; align-items:end;">
-              <div class="field" style="flex:1;"><label>Tjänster/dag krävs</label><input type="number" value="${k.antal}" oninput="setAdminKrav(${pi},${ki},'antal',this.value)" onblur="render()"></div>
+              <div class="field" style="flex:1;"><label>Tjänster/dag krävs</label><input type="number" value="${k.antal}" oninput="setAdminKrav(${pi},${ki},'antal',this.value)" onblur="refreshOverview()"></div>
               <button class="btn-small" onclick="removeAdminKrav(${pi},${ki}); render()">✕</button>
             </div>
           </div>`;
@@ -772,11 +772,11 @@ function renderAdmin(){
                   <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
                 </select>
               </div>
-              <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="render()" placeholder="t.ex. Tjänstesnitt"></div>
+              <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="refreshOverview()" placeholder="t.ex. Tjänstesnitt"></div>
             </div>
             <div class="row2">
-              <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="render()"></div>
-              <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="render()"></div>
+              <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="refreshOverview()"></div>
+              <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="refreshOverview()"></div>
             </div>
             <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
           </div>`).join('')}
@@ -790,13 +790,13 @@ function renderAdmin(){
         </div>
         ${p.specialOn ? `
           <div class="special-block">
-            <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)" onblur="render()"></div>
-            <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)" onblur="render()"></div>
+            <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)" onblur="refreshOverview()"></div>
+            <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)" onblur="refreshOverview()"></div>
             <div class="checkbox-row">
               <input type="checkbox" id="specialover${pi}" ${p.specialOverOn?'checked':''} onchange="toggleAdminField(${pi},'specialOverOn')">
               <label for="specialover${pi}">+ Extra procent på TB över gränsen (valfritt)</label>
             </div>
-            ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)" onblur="render()"></div>` : ''}
+            ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)" onblur="refreshOverview()"></div>` : ''}
           </div>` : ''}
       </div>
 
@@ -807,9 +807,9 @@ function renderAdmin(){
         </div>
         ${p.a4On ? `
           <div class="special-block">
-            <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)" onblur="render()">${p.tjanstinfoText||''}</textarea></div>
-            <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)" onblur="render()">${p.tavlingText||''}</textarea></div>
-            <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" onblur="render()" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
+            <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)" onblur="refreshOverview()">${p.tjanstinfoText||''}</textarea></div>
+            <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)" onblur="refreshOverview()">${p.tavlingText||''}</textarea></div>
+            <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" onblur="refreshOverview()" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
           </div>` : ''}
       </div>
 
@@ -819,7 +819,7 @@ function renderAdmin(){
           <label for="kk${pi}"><strong>Kundklubbskrav</strong> (provisionen uteblir helt annars)</label>
         </div>
         ${p.kundklubbOn ? `
-          <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)" onblur="render()"></div>` : ''}
+          <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)" onblur="refreshOverview()"></div>` : ''}
       </div>
     </div>`;
   });
@@ -829,7 +829,7 @@ function renderAdmin(){
   html += `</div>`; // close admin-main
 
   html += `<div class="admin-side">`;
-  html += renderAdminOverview(state.adminPeriods);
+  html += `<div id="adminOverviewBox">` + renderAdminOverview(state.adminPeriods) + `</div>`;
   html += `<div class="receipt">
       <button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button>
       <div style="height:10px"></div>
@@ -841,6 +841,12 @@ function renderAdmin(){
 
   return html;
 }
+
+function refreshOverview(){
+  const el = document.getElementById('adminOverviewBox');
+  if(el) el.innerHTML = renderAdminOverview(state.adminPeriods);
+}
+window.refreshOverview = refreshOverview;
 
 function renderAdminOverview(periods){
   const validPeriods = (periods||[]).filter(p => (p.steg||[]).some(s=>s.namn && s.krav!=='' && s.procent!==''));
