@@ -670,17 +670,17 @@ function renderAdmin(){
     html += `<div class="receipt period-block">
       <div class="period-head"><strong>${p.namn || 'Period ' + (pi+1)}</strong>
         <button class="btn-small" onclick="removeAdminPeriod(${pi}); render()">Ta bort period</button></div>
-      <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)"></div>
+      <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)" onblur="render()"></div>
       <div class="row2">
-        <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)"></div>
-        <div class="field"><label>Slutdatum</label><input type="date" value="${p.slut}" oninput="setAdminField(${pi},'slut',this.value)"></div>
+        <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)" onblur="render()"></div>
+        <div class="field"><label>Slutdatum</label><input type="date" value="${p.slut}" oninput="setAdminField(${pi},'slut',this.value)" onblur="render()"></div>
       </div>
       <label style="font-size:12px; color:var(--ink-soft); display:block; margin:10px 0 6px;">Stege (kr/dag → procent)</label>
       ${p.steg.map((s,si)=>`
         <div class="steg-row">
-          <input placeholder="Namn (Brons)" value="${s.namn}" oninput="setAdminSteg(${pi},${si},'namn',this.value)">
-          <input type="number" placeholder="kr/dag" value="${s.krav}" oninput="setAdminSteg(${pi},${si},'krav',this.value)">
-          <input type="number" placeholder="%" value="${s.procent}" oninput="setAdminSteg(${pi},${si},'procent',this.value)">
+          <input placeholder="Namn (Brons)" value="${s.namn}" oninput="setAdminSteg(${pi},${si},'namn',this.value)" onblur="render()">
+          <input type="number" placeholder="kr/dag" value="${s.krav}" oninput="setAdminSteg(${pi},${si},'krav',this.value)" onblur="render()">
+          <input type="number" placeholder="%" value="${s.procent}" oninput="setAdminSteg(${pi},${si},'procent',this.value)" onblur="render()">
           <button class="btn-small" onclick="removeAdminSteg(${pi},${si}); render()">✕</button>
         </div>`).join('')}
       <button class="secondary" onclick="addAdminSteg(${pi})">+ Lägg till steg</button>
@@ -691,8 +691,8 @@ function renderAdmin(){
       </div>
       ${p.kpiOn ? `
         <div class="row2" style="margin-top:8px;">
-          <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.kpiKrav}" oninput="setAdminField(${pi},'kpiKrav',this.value)"></div>
-          <div class="field"><label>Gäller vilket steg</label><input value="${p.kpiFor}" oninput="setAdminField(${pi},'kpiFor',this.value)" placeholder="t.ex. Guld"></div>
+          <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.kpiKrav}" oninput="setAdminField(${pi},'kpiKrav',this.value)" onblur="render()"></div>
+          <div class="field"><label>Gäller vilket steg</label><input value="${p.kpiFor}" oninput="setAdminField(${pi},'kpiFor',this.value)" onblur="render()" placeholder="t.ex. Guld"></div>
         </div>` : ''}
 
       <label style="font-size:12px; color:var(--ink-soft); display:block; margin:14px 0 6px;">Bonusar (extra % utöver TB-procenten)</label>
@@ -705,11 +705,11 @@ function renderAdmin(){
                 <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
               </select>
             </div>
-            <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" placeholder="t.ex. Tjänstesnitt"></div>
+            <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="render()" placeholder="t.ex. Tjänstesnitt"></div>
           </div>
           <div class="row2">
-            <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)"></div>
-            <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)"></div>
+            <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="render()"></div>
+            <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="render()"></div>
           </div>
           <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
         </div>`).join('')}
@@ -720,7 +720,7 @@ function renderAdmin(){
         <label for="kk${pi}">Kundklubbskrav (provisionen uteblir helt annars)</label>
       </div>
       ${p.kundklubbOn ? `
-        <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)"></div>` : ''}
+        <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)" onblur="render()"></div>` : ''}
 
       <div class="checkbox-row" style="margin-top:14px;">
         <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
@@ -728,13 +728,13 @@ function renderAdmin(){
       </div>
       ${p.specialOn ? `
         <div class="special-block">
-          <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)"></div>
-          <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)"></div>
+          <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)" onblur="render()"></div>
+          <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)" onblur="render()"></div>
           <div class="checkbox-row">
             <input type="checkbox" id="specialover${pi}" ${p.specialOverOn?'checked':''} onchange="toggleAdminField(${pi},'specialOverOn')">
             <label for="specialover${pi}">+ Extra procent på TB över gränsen (valfritt)</label>
           </div>
-          ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)"></div>` : ''}
+          ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)" onblur="render()"></div>` : ''}
         </div>` : ''}
 
       <div class="checkbox-row">
@@ -743,21 +743,43 @@ function renderAdmin(){
       </div>
       ${p.a4On ? `
         <div class="special-block">
-          <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)">${p.tjanstinfoText||''}</textarea></div>
-          <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)">${p.tavlingText||''}</textarea></div>
-          <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
+          <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)" onblur="render()">${p.tjanstinfoText||''}</textarea></div>
+          <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)" onblur="render()">${p.tavlingText||''}</textarea></div>
+          <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" onblur="render()" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
         </div>` : ''}
     </div>`;
   });
 
-  html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>
-    <div class="receipt">
+  html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>`;
+  html += renderAdminOverview(state.adminPeriods);
+  html += `<div class="receipt">
       <button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button>
       <div style="height:10px"></div>
       <button class="secondary" style="width:100%;" onclick="openA4()">Öppna A4-sammanfattning</button>
     </div>
     <div id="adminResult"></div>`;
 
+  return html;
+}
+
+function renderAdminOverview(periods){
+  const validPeriods = (periods||[]).filter(p => (p.steg||[]).some(s=>s.namn && s.krav!=='' && s.procent!==''));
+  if(!validPeriods.length){
+    return `<div class="receipt"><h2>Överblick</h2><div class="empty">Fyll i minst en period med ett fullständigt steg för att se en överblick här.</div></div>`;
+  }
+  let html = `<div class="receipt"><h2>Överblick — så här ser det ut för säljaren</h2>`;
+  validPeriods.forEach(p => {
+    const stegSorted = (p.steg||[]).filter(s=>s.namn && s.krav!=='' && s.procent!=='').slice().sort((a,b)=>b.krav-a.krav);
+    html += `<div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--line);">
+      <div style="font-weight:700; font-size:14px; margin-bottom:6px;">${p.namn||'(namnlös period)'}${p.start&&p.slut?' <span style="font-weight:400; color:var(--ink-soft); font-size:12px;">('+p.start+' – '+p.slut+')</span>':''}</div>
+      ${stegSorted.map(s=>`<div class="row"><span>${s.namn}</span><span class="v">${Number(s.krav).toLocaleString('sv-SE')} kr/dag → ${s.procent}%</span></div>`).join('')}
+      ${p.kpiOn && p.kpiKrav && p.kpiFor ? `<div class="row"><span>Tjänstekrav</span><span class="v">≥${p.kpiKrav}/dag för ${p.kpiFor}</span></div>` : ''}
+      ${(p.bonusar||[]).filter(b=>b.krav!=='' && b.bonusProcent!=='').map(b=>`<div class="row"><span>${b.namn||(b.typ==='varde'?'Tjänstevärde-bonus':'Tjänster-bonus')}</span><span class="v">≥${b.krav}${b.typ==='varde'?' kr/tj':'/dag'} → +${b.bonusProcent}%</span></div>`).join('')}
+      ${p.specialOn && p.specialSnitt ? `<div class="row"><span>Fast procent vid högt snitt</span><span class="v">≥${Number(p.specialSnitt).toLocaleString('sv-SE')} kr/dag → ${p.specialProcentHela||0}%${p.specialOverOn && p.specialProcentOver!=='' ? ' (+'+p.specialProcentOver+'% över gränsen)' : ''}</span></div>` : ''}
+      ${p.kundklubbOn && p.kundklubbProcent!=='' ? `<div class="row"><span>Kundklubbskrav</span><span class="v" style="color:var(--bad)">≥${p.kundklubbProcent}%, annars 0 kr</span></div>` : ''}
+    </div>`;
+  });
+  html += `</div>`;
   return html;
 }
 
@@ -832,34 +854,47 @@ function buildA4Html(full){
       ${kundklubbVarning}
       ${varning}
     </div>`;
-  }).join('<div class="divider"></div>');
+  }).join('');
 
   return `<!DOCTYPE html><html lang="sv"><head><meta charset="UTF-8"><title>${esc(full.deptName||'Provisionsmodell')}</title>
   <style>
-    @page{ size:A4; margin:18mm; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @page{ size:A4; margin:0; }
     *{box-sizing:border-box;}
-    body{font-family:'Segoe UI',Arial,sans-serif; color:#1a1a1a; margin:0;}
-    .title{font-size:46px; font-weight:300; margin:0 0 4px;}
-    .subtitle{font-size:16px; font-weight:700; margin:0 0 16px;}
-    .period-label{font-weight:700; font-size:16px; margin:18px 0 4px;}
-    .dates{font-weight:400; color:#555; font-size:14px;}
+    body{font-family:'Inter',Arial,sans-serif; color:#14171C; margin:0; background:#fff;}
+    .sheet{max-width:190mm; margin:0 auto; padding:0 16mm 16mm;}
+    .letterhead{background:#041752; color:#fff; padding:10mm 16mm; display:flex; align-items:center; gap:10px; margin-bottom:10mm;}
+    .letterhead .mark{display:inline-block; width:10px; height:16px; background:#5EBE2E; clip-path:polygon(0 0, 60% 0, 100% 50%, 60% 100%, 0 100%, 40% 50%);}
+    .letterhead .word{font-weight:800; letter-spacing:-0.02em; font-size:18px; text-transform:uppercase;}
+    .letterhead .word span{color:#8FE05A; text-transform:none; font-weight:700;}
+    .title{font-size:34px; font-weight:800; margin:0 0 2px; color:#041752; letter-spacing:-0.01em;}
+    .subtitle{font-size:15px; font-weight:700; margin:0 0 14px; color:#4A9924;}
+    .period-section{margin-bottom:10mm; padding-bottom:8mm; border-bottom:1px solid #E4E7EC;}
+    .period-section:last-child{border-bottom:none;}
+    .period-label{font-weight:800; font-size:16px; margin:0 0 8px; color:#041752; border-left:4px solid #5EBE2E; padding-left:10px;}
+    .dates{font-weight:500; color:#667085; font-size:13px;}
     table.tbl{width:100%; border-collapse:collapse; margin:8px 0 10px;}
-    table.tbl th, table.tbl td{border:1px solid #000; padding:8px 10px; text-align:left; font-size:14px;}
-    table.tbl thead th{background:#d9d9d9;}
-    .note{font-size:14px; margin:4px 0 10px; max-width:180mm;}
-    .section-label{color:#888; font-size:13px; margin:12px 0 2px;}
-    .comp-title{color:#e8a63c; font-weight:700; margin:14px 0 2px;}
-    .warning{color:#c0392b; font-weight:600; margin-top:14px;}
-    .divider{border-top:1px solid #ccc; margin:20px 0;}
-    .print-bar{margin-bottom:20px;}
-    .print-bar button{padding:10px 18px; font-size:14px; cursor:pointer;}
+    table.tbl th, table.tbl td{border:1px solid #E4E7EC; padding:9px 12px; text-align:left; font-size:13.5px;}
+    table.tbl thead th{background:#041752; color:#fff; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.03em; border-color:#041752;}
+    table.tbl tbody tr:nth-child(even){background:#F7F9FC;}
+    .note{font-size:13.5px; margin:4px 0 10px; max-width:180mm; color:#333; line-height:1.5;}
+    .section-label{color:#4A9924; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.03em; margin:12px 0 3px;}
+    .comp-title{color:#C9862B; font-weight:800; margin:14px 0 3px; font-size:14px;}
+    .warning{color:#D92D20; font-weight:700; margin-top:12px; font-size:13.5px; background:#FDECEA; padding:8px 12px; border-radius:6px; display:inline-block;}
+    .print-bar{padding:10mm 16mm 0;}
+    .print-bar button{padding:10px 20px; font-size:14px; cursor:pointer; background:#5EBE2E; color:#fff; border:none; border-radius:8px; font-weight:700; font-family:'Inter',sans-serif;}
+    .footer{text-align:center; font-size:11px; color:#98A2B3; margin-top:10mm;}
     @media print{ .print-bar{display:none;} }
   </style></head>
   <body>
     <div class="print-bar"><button onclick="window.print()">Skriv ut / Spara som PDF</button></div>
-    <div class="title">${esc(full.deptName||'')}</div>
-    <div class="subtitle">${esc(full.monthName||'')}${full.butik ? ' — '+(full.butik==='varmdo'?'Värmdö':'Åkersberga') : ''}</div>
-    ${sections}
+    <div class="letterhead"><span class="mark"></span><span class="word">ELGIGANTEN<span>Kollen</span></span></div>
+    <div class="sheet">
+      <div class="title">${esc(full.deptName||'')}</div>
+      <div class="subtitle">${esc(full.monthName||'')}${full.butik ? ' — '+(full.butik==='varmdo'?'Värmdö':full.butik==='akersberga'?'Åkersberga':'Båda butikerna') : ''}</div>
+      ${sections}
+      <div class="footer">Genererad med ElgigantenKollen</div>
+    </div>
   </body></html>`;
 }
 
