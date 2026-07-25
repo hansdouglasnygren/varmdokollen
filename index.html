@@ -35,7 +35,6 @@
     #app.admin-wide .periods-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:16px; padding:0 16px;}
     #app.admin-wide .periods-grid .period-block{margin:0;}
     #app.admin-wide nav.tabs{max-width:820px;}
-    #app.admin-wide .top-fields-row .field{max-width:440px;}
   }
   @media (min-width:1000px){
     #app.admin-wide{max-width:1180px;}
@@ -706,15 +705,15 @@ function renderAdmin(){
   html += `<div class="admin-layout"><div class="admin-main">`;
   html += `<div class="receipt">
     <h2>Provisionsuppgifter <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
-    <div class="top-fields-row">
-      <div class="field"><label>Butik</label>
-        <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);" onchange="state.adminButik=this.value">
-          <option value="" ${!state.adminButik?'selected':''}>— Välj butik —</option>
-          <option value="varmdo" ${state.adminButik==='varmdo'?'selected':''}>Värmdö</option>
-          <option value="akersberga" ${state.adminButik==='akersberga'?'selected':''}>Åkersberga</option>
-          <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
-        </select>
-      </div>
+    <div class="field" style="max-width:440px;"><label>Butik</label>
+      <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);" onchange="state.adminButik=this.value">
+        <option value="" ${!state.adminButik?'selected':''}>— Välj butik —</option>
+        <option value="varmdo" ${state.adminButik==='varmdo'?'selected':''}>Värmdö</option>
+        <option value="akersberga" ${state.adminButik==='akersberga'?'selected':''}>Åkersberga</option>
+        <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
+      </select>
+    </div>
+    <div class="row2" style="max-width:640px;">
       <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" onblur="refreshOverview()" placeholder="t.ex. Juli 2026"></div>
       <div class="field"><label>Butik/avdelning (rubrik på A4)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
     </div>
