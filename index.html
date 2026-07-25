@@ -28,6 +28,7 @@
 
   #app{max-width:480px; margin:0 auto; padding:0 0 100px; min-height:100vh; transition:max-width .15s;}
   #app.admin-wide{max-width:480px;}
+  #app.admin-wide .admin-side .receipt{margin-left:0; margin-right:0;}
   @media (min-width:760px){
     #app.admin-wide{max-width:820px;}
     #app.admin-wide .receipt{margin-left:16px; margin-right:16px;}
@@ -35,10 +36,18 @@
     #app.admin-wide .periods-grid .period-block{margin:0;}
     #app.admin-wide nav.tabs{max-width:820px;}
   }
-  @media (min-width:1100px){
-    #app.admin-wide{max-width:1080px;}
-    #app.admin-wide .periods-grid{grid-template-columns:1fr 1fr 1fr;}
-    #app.admin-wide nav.tabs{max-width:1080px;}
+  @media (min-width:1000px){
+    #app.admin-wide{max-width:1180px;}
+    #app.admin-wide nav.tabs{max-width:1180px;}
+    #app.admin-wide .admin-layout{display:grid; grid-template-columns:1fr 360px; gap:20px; align-items:start; padding:0 16px;}
+    #app.admin-wide .admin-layout .receipt{margin-left:0; margin-right:0;}
+    #app.admin-wide .admin-main .periods-grid{padding:0; grid-template-columns:1fr 1fr;}
+    #app.admin-wide .admin-side{position:sticky; top:16px; display:flex; flex-direction:column;}
+  }
+  @media (min-width:1350px){
+    #app.admin-wide{max-width:1400px;}
+    #app.admin-wide nav.tabs{max-width:1400px;}
+    #app.admin-wide .admin-main .periods-grid{grid-template-columns:1fr 1fr 1fr;}
   }
 
   header.top{display:flex; align-items:center; justify-content:space-between; background:#fff; color:var(--navy); padding:16px 16px; margin:0 0 18px; border-bottom:1px solid var(--line); box-shadow:0 1px 3px rgba(4,23,82,0.05);}
@@ -681,6 +690,7 @@ function renderAdmin(){
   html += isEditing
     ? `<div class="banner" style="background:var(--navy);">Redigerar tidigare provisionsmodell: ${state.adminMonthName||'(namnlös)'}${state.adminButik?' · '+STORE_LABELS[state.adminButik]:''}</div>`
     : `<div class="banner" style="background:var(--green);">Ny provisionsmodell</div>`;
+  html += `<div class="admin-layout"><div class="admin-main">`;
   html += `<div class="receipt">
     <h2>Admin — bygg månadens budget <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
     <div class="field"><label>Butik (denna provision gäller endast för vald butik)</label>
@@ -691,7 +701,7 @@ function renderAdmin(){
         <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
       </select>
     </div>
-    <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" placeholder="t.ex. Juli 2026"></div>
+    <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" onblur="render()" placeholder="t.ex. Juli 2026"></div>
     <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
   </div>`;
 
@@ -782,6 +792,9 @@ function renderAdmin(){
   html += `</div>`;
 
   html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>`;
+  html += `</div>`; // close admin-main
+
+  html += `<div class="admin-side">`;
   html += renderAdminOverview(state.adminPeriods);
   html += `<div class="receipt">
       <button class="primary" style="width:100%;" onclick="generateAdminLink()">Generera länk + QR</button>
@@ -789,6 +802,8 @@ function renderAdmin(){
       <button class="secondary" style="width:100%;" onclick="openA4()">Öppna A4-sammanfattning</button>
     </div>
     <div id="adminResult"></div>`;
+  html += `</div>`; // close admin-side
+  html += `</div>`; // close admin-layout
 
   return html;
 }
