@@ -123,6 +123,10 @@
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .checkbox-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px;}
   .special-block{border-top:1px solid var(--line); margin-top:10px; padding-top:10px;}
+  .toggle-panel{background:#F7F9FC; border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px;}
+  .toggle-panel.kk-panel{background:#FDECEA; border-color:#F1B8AE;}
+  .toggle-panel .checkbox-row{margin-top:0;}
+  .toggle-panel .special-block{border-top:1px solid rgba(0,0,0,0.08);}
   .btn-add{background:#EEF1F7; border:1px dashed var(--navy); padding:8px 12px; border-radius:6px; font-size:13px; width:calc(100% - 32px); margin:0 16px 14px; color:var(--navy); cursor:pointer; font-weight:600;}
   .btn-small{background:none; border:none; color:var(--bad); font-size:12px; padding:4px 8px; cursor:pointer; font-weight:600;}
   .out{word-break:break-all; font-size:12px; background:#EEF1F7; padding:10px; border-radius:6px; border:1px solid var(--line);}
@@ -729,68 +733,78 @@ function renderAdmin(){
         </div>`).join('')}
       <button class="secondary" onclick="addAdminSteg(${pi})">+ Lägg till steg</button>
 
-      <div class="checkbox-row">
-        <input type="checkbox" id="kpi${pi}" ${p.kpiOn?'checked':''} onchange="toggleAdminField(${pi},'kpiOn')">
-        <label for="kpi${pi}">Tjänstekrav gäller för högsta steget</label>
+      <div class="toggle-panel">
+        <div class="checkbox-row">
+          <input type="checkbox" id="kpi${pi}" ${p.kpiOn?'checked':''} onchange="toggleAdminField(${pi},'kpiOn')">
+          <label for="kpi${pi}">Tjänstekrav gäller för högsta steget</label>
+        </div>
+        ${p.kpiOn ? `
+          <div class="row2" style="margin-top:8px;">
+            <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.kpiKrav}" oninput="setAdminField(${pi},'kpiKrav',this.value)" onblur="render()"></div>
+            <div class="field"><label>Gäller vilket steg</label><input value="${p.kpiFor}" oninput="setAdminField(${pi},'kpiFor',this.value)" onblur="render()" placeholder="t.ex. Guld"></div>
+          </div>` : ''}
       </div>
-      ${p.kpiOn ? `
-        <div class="row2" style="margin-top:8px;">
-          <div class="field"><label>Tjänster/dag krävs</label><input type="number" value="${p.kpiKrav}" oninput="setAdminField(${pi},'kpiKrav',this.value)" onblur="render()"></div>
-          <div class="field"><label>Gäller vilket steg</label><input value="${p.kpiFor}" oninput="setAdminField(${pi},'kpiFor',this.value)" onblur="render()" placeholder="t.ex. Guld"></div>
-        </div>` : ''}
 
-      <label style="font-size:12px; color:var(--ink-soft); display:block; margin:14px 0 6px;">Bonusar (extra % utöver TB-procenten)</label>
-      ${(p.bonusar||[]).map((b,bi)=>`
-        <div class="special-block" style="margin-top:0; border-top:none; padding-top:0;">
-          <div class="row2">
-            <div class="field"><label>Mätvärde</label>
-              <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
-                <option value="antal" ${b.typ==='antal'?'selected':''}>Tjänster/dag (antal)</option>
-                <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
-              </select>
+      <div class="toggle-panel">
+        <label style="font-size:12px; color:var(--ink-soft); display:block; margin:0 0 8px;">Bonusar (extra % utöver TB-procenten)</label>
+        ${(p.bonusar||[]).map((b,bi)=>`
+          <div class="special-block" style="margin-top:0; border-top:none; padding-top:0;">
+            <div class="row2">
+              <div class="field"><label>Mätvärde</label>
+                <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
+                  <option value="antal" ${b.typ==='antal'?'selected':''}>Tjänster/dag (antal)</option>
+                  <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
+                </select>
+              </div>
+              <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="render()" placeholder="t.ex. Tjänstesnitt"></div>
             </div>
-            <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="render()" placeholder="t.ex. Tjänstesnitt"></div>
-          </div>
-          <div class="row2">
-            <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="render()"></div>
-            <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="render()"></div>
-          </div>
-          <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
-        </div>`).join('')}
-      <button class="secondary" onclick="addAdminBonus(${pi})">+ Lägg till bonus</button>
-
-      <div class="checkbox-row">
-        <input type="checkbox" id="kk${pi}" ${p.kundklubbOn?'checked':''} onchange="toggleAdminField(${pi},'kundklubbOn')">
-        <label for="kk${pi}">Kundklubbskrav (provisionen uteblir helt annars)</label>
+            <div class="row2">
+              <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="render()"></div>
+              <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="render()"></div>
+            </div>
+            <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
+          </div>`).join('')}
+        <button class="secondary" onclick="addAdminBonus(${pi})">+ Lägg till bonus</button>
       </div>
-      ${p.kundklubbOn ? `
-        <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)" onblur="render()"></div>` : ''}
 
-      <div class="checkbox-row" style="margin-top:14px;">
-        <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
-        <label for="special${pi}">Fast procent på hela TB vid visst snitt</label>
+      <div class="toggle-panel">
+        <div class="checkbox-row">
+          <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
+          <label for="special${pi}">Fast procent på hela TB vid visst snitt</label>
+        </div>
+        ${p.specialOn ? `
+          <div class="special-block">
+            <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)" onblur="render()"></div>
+            <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)" onblur="render()"></div>
+            <div class="checkbox-row">
+              <input type="checkbox" id="specialover${pi}" ${p.specialOverOn?'checked':''} onchange="toggleAdminField(${pi},'specialOverOn')">
+              <label for="specialover${pi}">+ Extra procent på TB över gränsen (valfritt)</label>
+            </div>
+            ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)" onblur="render()"></div>` : ''}
+          </div>` : ''}
       </div>
-      ${p.specialOn ? `
-        <div class="special-block">
-          <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)" onblur="render()"></div>
-          <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)" onblur="render()"></div>
-          <div class="checkbox-row">
-            <input type="checkbox" id="specialover${pi}" ${p.specialOverOn?'checked':''} onchange="toggleAdminField(${pi},'specialOverOn')">
-            <label for="specialover${pi}">+ Extra procent på TB över gränsen (valfritt)</label>
-          </div>
-          ${p.specialOverOn ? `<div class="field" style="margin-top:8px;"><label>% på TB över gränsen</label><input type="number" value="${p.specialProcentOver}" oninput="setAdminField(${pi},'specialProcentOver',this.value)" onblur="render()"></div>` : ''}
-        </div>` : ''}
 
-      <div class="checkbox-row">
-        <input type="checkbox" id="a4${pi}" ${p.a4On?'checked':''} onchange="toggleAdminField(${pi},'a4On')">
-        <label for="a4${pi}">Extra text för A4-utskriften (valfritt)</label>
+      <div class="toggle-panel">
+        <div class="checkbox-row">
+          <input type="checkbox" id="a4${pi}" ${p.a4On?'checked':''} onchange="toggleAdminField(${pi},'a4On')">
+          <label for="a4${pi}">Extra text för A4-utskriften (valfritt)</label>
+        </div>
+        ${p.a4On ? `
+          <div class="special-block">
+            <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)" onblur="render()">${p.tjanstinfoText||''}</textarea></div>
+            <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)" onblur="render()">${p.tavlingText||''}</textarea></div>
+            <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" onblur="render()" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
+          </div>` : ''}
       </div>
-      ${p.a4On ? `
-        <div class="special-block">
-          <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)" onblur="render()">${p.tjanstinfoText||''}</textarea></div>
-          <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)" onblur="render()">${p.tavlingText||''}</textarea></div>
-          <div class="field"><label>Varningstext (visas i rött)</label><input value="${p.varningText||''}" oninput="setAdminField(${pi},'varningText',this.value)" onblur="render()" placeholder="t.ex. Provisionen uteblir om kundklubbsrekryteringen ligger under 20%."></div>
-        </div>` : ''}
+
+      <div class="toggle-panel kk-panel">
+        <div class="checkbox-row">
+          <input type="checkbox" id="kk${pi}" ${p.kundklubbOn?'checked':''} onchange="toggleAdminField(${pi},'kundklubbOn')">
+          <label for="kk${pi}"><strong>Kundklubbskrav</strong> (provisionen uteblir helt annars)</label>
+        </div>
+        ${p.kundklubbOn ? `
+          <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)" onblur="render()"></div>` : ''}
+      </div>
     </div>`;
   });
   html += `</div>`;
