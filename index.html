@@ -123,6 +123,10 @@
   .checkbox-row{display:flex; align-items:center; gap:8px; margin-top:8px; font-size:13px;}
   .special-block{border-top:1px solid var(--line); margin-top:10px; padding-top:10px;}
   .toggle-panel{background:#F7F9FC; border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:12px;}
+  .panel-head{display:flex; justify-content:space-between; align-items:center; gap:8px;}
+  .collapse-btn{background:none; border:none; color:var(--ink-soft); font-size:12px; cursor:pointer; padding:4px 6px; flex-shrink:0; display:flex; align-items:center; gap:3px;}
+  .collapse-btn .chev{display:inline-block; transition:transform .15s;}
+  .collapse-btn.is-open .chev{transform:rotate(90deg);}
   .toggle-panel.kk-panel{background:#FDECEA; border-color:#F1B8AE;}
   .toggle-panel .checkbox-row{margin-top:0;}
   .toggle-panel .special-block{border-top:1px solid rgba(0,0,0,0.08);}
@@ -238,7 +242,10 @@ function decodeConfig(code){
 }
 
 const ADMIN_PASSWORD = '3454772';
-let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[], adminMonthName:'', adminDeptName:'', adminButik:'', adminSubTab:'new', adminEditingId:null };
+let state = { tab:'oversikt', banner:null, adminUnlocked:false, adminPeriods:[], adminMonthName:'', adminDeptName:'', adminButik:'', adminSubTab:'new', adminEditingId:null, collapsed:{} };
+function toggleCollapse(key){ state.collapsed[key] = !state.collapsed[key]; render(); }
+window.toggleCollapse = toggleCollapse;
+function isCollapsed(key){ return !!state.collapsed[key]; }
 
 function openAdmin(){
   if(state.adminUnlocked){ state.tab='admin'; render(); return; }
@@ -722,8 +729,9 @@ function renderAdmin(){
   html += `<div class="periods-grid">`;
   state.adminPeriods.forEach((p, pi) => {
     html += `<div class="receipt period-block">
-      <div class="period-head"><strong>${p.namn || 'Period ' + (pi+1)}</strong>
+      <div class="period-head"><span style="display:flex; align-items:center; gap:6px;"><button class="collapse-btn ${!isCollapsed('period-'+pi)?'is-open':''}" onclick="toggleCollapse('period-${pi}')" title="Dölj/visa period"><span class="chev">›</span></button><strong>${p.namn || 'Period ' + (pi+1)}</strong></span>
         <button class="btn-small" onclick="removeAdminPeriod(${pi}); render()">Ta bort period</button></div>
+      ${isCollapsed('period-'+pi) ? `<div style="font-size:12px; color:var(--ink-soft);">${p.start&&p.slut ? p.start+' – '+p.slut : 'Inga datum satta'} · ${(p.steg||[]).filter(s=>s.namn).length} steg</div>` : `
       <div class="field"><label>Namn</label><input value="${p.namn}" oninput="setAdminField(${pi},'namn',this.value)" onblur="refreshOverview()"></div>
       <div class="row2">
         <div class="field"><label>Startdatum</label><input type="date" value="${p.start}" oninput="setAdminField(${pi},'start',this.value)" onblur="refreshOverview()"></div>
@@ -740,11 +748,14 @@ function renderAdmin(){
       <button class="secondary" onclick="addAdminSteg(${pi})">+ Lägg till steg</button>
 
       <div class="toggle-panel">
-        <div class="checkbox-row">
-          <input type="checkbox" id="tk${pi}" ${(p.tjanstekravOn || (p.tjanstekrav||[]).length>0)?'checked':''} onchange="toggleAdminField(${pi},'tjanstekravOn')">
-          <label for="tk${pi}">Tjänstekrav per steg (kräver visst antal tjänster/dag för att nå steget)</label>
+        <div class="panel-head">
+          <div class="checkbox-row">
+            <input type="checkbox" id="tk${pi}" ${(p.tjanstekravOn || (p.tjanstekrav||[]).length>0)?'checked':''} onchange="toggleAdminField(${pi},'tjanstekravOn')">
+            <label for="tk${pi}">Tjänstekrav per steg (kräver visst antal tjänster/dag för att nå steget)</label>
+          </div>
+          <button class="collapse-btn ${!isCollapsed('tk-'+pi)?'is-open':''}" onclick="toggleCollapse('tk-${pi}')" title="Dölj/visa"><span class="chev">›</span></button>
         </div>
-        ${(p.tjanstekravOn || (p.tjanstekrav||[]).length>0) ? `
+        ${(p.tjanstekravOn || (p.tjanstekrav||[]).length>0) && !isCollapsed('tk-'+pi) ? `
         <div style="margin-top:10px;">
           ${(p.tjanstekrav||[]).map((k,ki)=>{
             const stegOptions = (p.steg||[]).filter(s=>s.namn).map(s=>`<option value="${s.namn}" ${k.steg===s.namn?'selected':''}>${s.namn}</option>`).join('');
@@ -767,33 +778,42 @@ function renderAdmin(){
       </div>
 
       <div class="toggle-panel">
-        <label style="font-size:12px; color:var(--ink-soft); display:block; margin:0 0 8px;">Bonusar (extra % utöver TB-procenten)</label>
-        ${(p.bonusar||[]).map((b,bi)=>`
-          <div class="special-block" style="margin-top:0; border-top:none; padding-top:0;">
-            <div class="row2">
-              <div class="field"><label>Mätvärde</label>
-                <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
-                  <option value="antal" ${b.typ==='antal'?'selected':''}>Tjänster/dag (antal)</option>
-                  <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
-                </select>
+        <div class="panel-head">
+          <label style="font-size:12px; color:var(--ink-soft); display:block; margin:0;">Bonusar (extra % utöver TB-procenten)${(p.bonusar||[]).length ? ' — '+p.bonusar.length+' st' : ''}</label>
+          <button class="collapse-btn ${!isCollapsed('bo-'+pi)?'is-open':''}" onclick="toggleCollapse('bo-${pi}')" title="Dölj/visa"><span class="chev">›</span></button>
+        </div>
+        ${!isCollapsed('bo-'+pi) ? `
+        <div style="margin-top:8px;">
+          ${(p.bonusar||[]).map((b,bi)=>`
+            <div class="special-block" style="margin-top:0; border-top:none; padding-top:0;">
+              <div class="row2">
+                <div class="field"><label>Mätvärde</label>
+                  <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:4px; font-size:14px; background:var(--card);" onchange="setAdminBonus(${pi},${bi},'typ',this.value); render()">
+                    <option value="antal" ${b.typ==='antal'?'selected':''}>Tjänster/dag (antal)</option>
+                    <option value="varde" ${b.typ==='varde'?'selected':''}>Tjänstevärde (kr/tjänst)</option>
+                  </select>
+                </div>
+                <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="refreshOverview()" placeholder="t.ex. Tjänstesnitt"></div>
               </div>
-              <div class="field"><label>Namn (valfritt)</label><input value="${b.namn||''}" oninput="setAdminBonus(${pi},${bi},'namn',this.value)" onblur="refreshOverview()" placeholder="t.ex. Tjänstesnitt"></div>
-            </div>
-            <div class="row2">
-              <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="refreshOverview()"></div>
-              <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="refreshOverview()"></div>
-            </div>
-            <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
-          </div>`).join('')}
-        <button class="secondary" onclick="addAdminBonus(${pi})">+ Lägg till bonus</button>
+              <div class="row2">
+                <div class="field"><label>${b.typ==='varde'?'Kr/tjänst krävs':'Tjänster/dag krävs'}</label><input type="number" value="${b.krav}" oninput="setAdminBonus(${pi},${bi},'krav',this.value)" onblur="refreshOverview()"></div>
+                <div class="field"><label>Extra procentenheter</label><input type="number" value="${b.bonusProcent}" oninput="setAdminBonus(${pi},${bi},'bonusProcent',this.value)" onblur="refreshOverview()"></div>
+              </div>
+              <button class="btn-small" onclick="removeAdminBonus(${pi},${bi}); render()">✕ Ta bort bonus</button>
+            </div>`).join('')}
+          <button class="secondary" onclick="addAdminBonus(${pi})">+ Lägg till bonus</button>
+        </div>` : ''}
       </div>
 
       <div class="toggle-panel">
-        <div class="checkbox-row">
-          <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
-          <label for="special${pi}">Egen provisionsnivå vid högt dagssnitt (ersätter ordinarie stege)</label>
+        <div class="panel-head">
+          <div class="checkbox-row">
+            <input type="checkbox" id="special${pi}" ${p.specialOn?'checked':''} onchange="toggleAdminField(${pi},'specialOn')">
+            <label for="special${pi}">Egen provisionsnivå vid högt dagssnitt (ersätter ordinarie stege)</label>
+          </div>
+          <button class="collapse-btn ${!isCollapsed('sp-'+pi)?'is-open':''}" onclick="toggleCollapse('sp-${pi}')" title="Dölj/visa"><span class="chev">›</span></button>
         </div>
-        ${p.specialOn ? `
+        ${p.specialOn && !isCollapsed('sp-'+pi) ? `
           <div class="special-block">
             <div class="field"><label>Snittgräns (kr/dag)</label><input type="number" value="${p.specialSnitt}" oninput="setAdminField(${pi},'specialSnitt',this.value)" onblur="refreshOverview()"></div>
             <div class="field"><label>% på hela TB</label><input type="number" value="${p.specialProcentHela}" oninput="setAdminField(${pi},'specialProcentHela',this.value)" onblur="refreshOverview()"></div>
@@ -806,11 +826,14 @@ function renderAdmin(){
       </div>
 
       <div class="toggle-panel">
-        <div class="checkbox-row">
-          <input type="checkbox" id="a4${pi}" ${p.a4On?'checked':''} onchange="toggleAdminField(${pi},'a4On')">
-          <label for="a4${pi}">Extra text för A4-utskriften (valfritt)</label>
+        <div class="panel-head">
+          <div class="checkbox-row">
+            <input type="checkbox" id="a4${pi}" ${p.a4On?'checked':''} onchange="toggleAdminField(${pi},'a4On')">
+            <label for="a4${pi}">Extra text för A4-utskriften (valfritt)</label>
+          </div>
+          <button class="collapse-btn ${!isCollapsed('a4-'+pi)?'is-open':''}" onclick="toggleCollapse('a4-${pi}')" title="Dölj/visa"><span class="chev">›</span></button>
         </div>
-        ${p.a4On ? `
+        ${p.a4On && !isCollapsed('a4-'+pi) ? `
           <div class="special-block">
             <div class="field"><label>Vad räknas som en tjänst?</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tjanstinfoText',this.value)" onblur="refreshOverview()">${p.tjanstinfoText||''}</textarea></div>
             <div class="field"><label>Tävlingstext (rubrik blir "Tävling!")</label><textarea style="width:100%; min-height:60px; padding:9px; border:1px solid var(--line); border-radius:4px; font-size:13px;" oninput="setAdminField(${pi},'tavlingText',this.value)" onblur="refreshOverview()">${p.tavlingText||''}</textarea></div>
@@ -819,13 +842,17 @@ function renderAdmin(){
       </div>
 
       <div class="toggle-panel kk-panel">
-        <div class="checkbox-row">
-          <input type="checkbox" id="kk${pi}" ${p.kundklubbOn?'checked':''} onchange="toggleAdminField(${pi},'kundklubbOn')">
-          <label for="kk${pi}"><strong>Kundklubbskrav</strong> (provisionen uteblir helt annars)</label>
+        <div class="panel-head">
+          <div class="checkbox-row">
+            <input type="checkbox" id="kk${pi}" ${p.kundklubbOn?'checked':''} onchange="toggleAdminField(${pi},'kundklubbOn')">
+            <label for="kk${pi}"><strong>Kundklubbskrav</strong> (provisionen uteblir helt annars)</label>
+          </div>
+          <button class="collapse-btn ${!isCollapsed('kk-'+pi)?'is-open':''}" onclick="toggleCollapse('kk-${pi}')" title="Dölj/visa"><span class="chev">›</span></button>
         </div>
-        ${p.kundklubbOn ? `
+        ${p.kundklubbOn && !isCollapsed('kk-'+pi) ? `
           <div class="field" style="margin-top:8px;"><label>Minsta kundklubbsrekrytering (%)</label><input type="number" value="${p.kundklubbProcent}" oninput="setAdminField(${pi},'kundklubbProcent',this.value)" onblur="refreshOverview()"></div>` : ''}
       </div>
+      `}
     </div>`;
   });
   html += `</div>`;
