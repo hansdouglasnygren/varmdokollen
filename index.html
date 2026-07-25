@@ -26,7 +26,20 @@
   html,body{margin:0; padding:0; background:var(--bg); color:var(--ink); font-family:'Inter',sans-serif; min-height:100vh; overflow-x:hidden;}
   .num{font-variant-numeric:tabular-nums; font-weight:700;}
 
-  #app{max-width:480px; margin:0 auto; padding:0 0 100px; min-height:100vh;}
+  #app{max-width:480px; margin:0 auto; padding:0 0 100px; min-height:100vh; transition:max-width .15s;}
+  #app.admin-wide{max-width:480px;}
+  @media (min-width:760px){
+    #app.admin-wide{max-width:820px;}
+    #app.admin-wide .receipt{margin-left:16px; margin-right:16px;}
+    #app.admin-wide .periods-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 16px;}
+    #app.admin-wide .periods-grid .period-block{margin:0;}
+    #app.admin-wide nav.tabs{max-width:820px;}
+  }
+  @media (min-width:1100px){
+    #app.admin-wide{max-width:1080px;}
+    #app.admin-wide .periods-grid{grid-template-columns:1fr 1fr 1fr;}
+    #app.admin-wide nav.tabs{max-width:1080px;}
+  }
 
   header.top{display:flex; align-items:center; justify-content:space-between; background:#fff; color:var(--navy); padding:16px 16px; margin:0 0 18px; border-bottom:1px solid var(--line); box-shadow:0 1px 3px rgba(4,23,82,0.05);}
   header.top h1{font-size:17px; font-weight:800; letter-spacing:-0.02em; margin:0; color:var(--navy); display:flex; align-items:center; gap:6px; text-transform:uppercase;}
@@ -404,6 +417,7 @@ function render(){
   const cfg = loadConfig();
   const entries = loadEntries();
   const userStore = loadUserStore();
+  app.className = (state.tab === 'admin') ? 'admin-wide' : '';
 
   if(!userStore && state.tab !== 'admin'){
     app.innerHTML = `<header class="top"><h1>${headerWordmark()}</h1></header>
@@ -636,11 +650,12 @@ function renderAdmin(){
     if(!history.length){
       html += `<div class="receipt"><div class="empty">Inga sparade provisionsmodeller ännu — de sparas automatiskt när du genererar en länk eller A4.</div></div>`;
     } else {
+      html += `<div class="periods-grid">`;
       history.forEach(h => {
         const date = new Date(h.savedAt);
         const dateStr = date.toLocaleDateString('sv-SE') + ' ' + date.toLocaleTimeString('sv-SE', {hour:'2-digit', minute:'2-digit'});
         const isThisOne = state.adminEditingId === h.id && isEditing;
-        html += `<div class="receipt" style="${isThisOne?'border:2px solid var(--navy);':''}">
+        html += `<div class="receipt period-block" style="${isThisOne?'border:2px solid var(--navy);':''}">
           <div class="row" style="align-items:center;">
             <span><strong>${h.monthName}</strong>${h.butik ? ' · '+STORE_LABELS[h.butik] : ''}${h.deptName ? ' · '+h.deptName : ''}<br><span style="font-size:12px; color:var(--ink-soft);">${h.periods.length} period(er) · sparad ${dateStr}</span>${isThisOne ? '<br><span style="font-size:12px; color:var(--navy); font-weight:700;">Öppen för redigering just nu</span>' : ''}</span>
           </div>
@@ -650,6 +665,7 @@ function renderAdmin(){
           </div>
         </div>`;
       });
+      html += `</div>`;
     }
     return html;
   }
@@ -679,6 +695,7 @@ function renderAdmin(){
     <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
   </div>`;
 
+  html += `<div class="periods-grid">`;
   state.adminPeriods.forEach((p, pi) => {
     html += `<div class="receipt period-block">
       <div class="period-head"><strong>${p.namn || 'Period ' + (pi+1)}</strong>
@@ -762,6 +779,7 @@ function renderAdmin(){
         </div>` : ''}
     </div>`;
   });
+  html += `</div>`;
 
   html += `<button class="btn-add" onclick="addAdminPeriod()">+ Lägg till period</button>`;
   html += renderAdminOverview(state.adminPeriods);
