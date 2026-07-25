@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ElgigantenKollen</title>
+<title>Elgiganten Värmdö/Åkersberga</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#041752">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -32,6 +32,10 @@
   header.top h1{font-size:17px; font-weight:800; letter-spacing:-0.02em; margin:0; color:var(--navy); display:flex; align-items:center; gap:6px; text-transform:uppercase;}
   header.top h1::before{content:""; display:inline-block; width:10px; height:16px; background:var(--green); clip-path:polygon(0 0, 60% 0, 100% 50%, 60% 100%, 0 100%, 40% 50%);}
   header.top h1 span{color:var(--green-deep); text-transform:none; font-weight:700; margin-left:1px;}
+  .store-badge{display:inline-block; padding:3px 9px; border-radius:5px; font-size:11px; font-weight:800; letter-spacing:.03em; margin-left:2px; vertical-align:middle;}
+  .sb-varmdo{background:var(--green); color:#fff;}
+  .sb-akersberga{background:#2E4C8F; color:#fff;}
+  .sb-both{background:#EEF1F7; color:var(--navy); border:1px solid var(--line);}
   header.top .month{font-size:12px; color:var(--ink-soft); font-weight:600;}
 
   .receipt{
@@ -115,6 +119,15 @@ function saveUserStore(v){ localStorage.setItem(STORE_USERSTORE, v); }
 function chooseUserStore(v){ saveUserStore(v); render(); }
 window.chooseUserStore = chooseUserStore;
 const STORE_LABELS = { varmdo:'Värmdö', akersberga:'Åkersberga', bada:'Båda butikerna' };
+function storeBadgeHtml(store){
+  if(store==='varmdo') return `<span class="store-badge sb-varmdo">VÄRMDÖ</span>`;
+  if(store==='akersberga') return `<span class="store-badge sb-akersberga">ÅKERSBERGA</span>`;
+  return `<span class="store-badge sb-both">VÄRMDÖ / ÅKERSBERGA</span>`;
+}
+function headerWordmark(){
+  const store = loadUserStore();
+  return `ELGIGANTEN ${storeBadgeHtml(store)}`;
+}
 function periodsForUser(cfg){
   const store = loadUserStore();
   return (cfg.periods||[]).filter(p => !p.butik || p.butik==='bada' || p.butik===store);
@@ -393,7 +406,7 @@ function render(){
   const userStore = loadUserStore();
 
   if(!userStore && state.tab !== 'admin'){
-    app.innerHTML = `<header class="top"><h1>ELGIGANTEN<span>Kollen</span></h1></header>
+    app.innerHTML = `<header class="top"><h1>${headerWordmark()}</h1></header>
       <div class="receipt">
         <h2>Vilken butik jobbar du i?</h2>
         <p style="font-size:14px; color:var(--ink-soft); margin:0 0 16px;">Det här avgör vilken provisionsmodell du ser om chefen kör olika modeller per butik.</p>
@@ -405,7 +418,7 @@ function render(){
     return;
   }
 
-  let html = `<header class="top"><h1>ELGIGANTEN<span>Kollen</span></h1>`;
+  let html = `<header class="top"><h1>${headerWordmark()}</h1>`;
   html += `<div style="display:flex; align-items:center; gap:10px;"><div class="month">${cfg && cfg.namn ? cfg.namn : (cfg && cfg.month) || '—'}</div><button class="gear-btn" onclick="openAdmin()" title="Admin">&#9881;</button></div></header>`;
 
   if(state.banner){
@@ -867,6 +880,10 @@ function buildA4Html(full){
     .letterhead .mark{display:inline-block; width:10px; height:16px; background:#5EBE2E; clip-path:polygon(0 0, 60% 0, 100% 50%, 60% 100%, 0 100%, 40% 50%);}
     .letterhead .word{font-weight:800; letter-spacing:-0.02em; font-size:18px; text-transform:uppercase;}
     .letterhead .word span{color:#8FE05A; text-transform:none; font-weight:700;}
+    .store-badge{display:inline-block; padding:3px 9px; border-radius:5px; font-size:11px; font-weight:800; letter-spacing:.03em; margin-left:2px; vertical-align:middle;}
+    .sb-varmdo{background:#5EBE2E; color:#fff;}
+    .sb-akersberga{background:#2E4C8F; color:#fff;}
+    .sb-both{background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.5);}
     .title{font-size:34px; font-weight:800; margin:0 0 2px; color:#041752; letter-spacing:-0.01em;}
     .subtitle{font-size:15px; font-weight:700; margin:0 0 14px; color:#4A9924;}
     .period-section{margin-bottom:10mm; padding-bottom:8mm; border-bottom:1px solid #E4E7EC;}
@@ -888,12 +905,12 @@ function buildA4Html(full){
   </style></head>
   <body>
     <div class="print-bar"><button onclick="window.print()">Skriv ut / Spara som PDF</button></div>
-    <div class="letterhead"><span class="mark"></span><span class="word">ELGIGANTEN<span>Kollen</span></span></div>
+    <div class="letterhead"><span class="mark"></span><span class="word">ELGIGANTEN ${storeBadgeHtml(full.butik)}</span></div>
     <div class="sheet">
       <div class="title">${esc(full.deptName||'')}</div>
       <div class="subtitle">${esc(full.monthName||'')}${full.butik ? ' — '+(full.butik==='varmdo'?'Värmdö':full.butik==='akersberga'?'Åkersberga':'Båda butikerna') : ''}</div>
       ${sections}
-      <div class="footer">Genererad med ElgigantenKollen</div>
+      <div class="footer">Elgiganten Värmdö/Åkersberga</div>
     </div>
   </body></html>`;
 }
