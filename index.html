@@ -32,23 +32,25 @@
   @media (min-width:760px){
     #app.admin-wide{max-width:820px;}
     #app.admin-wide .receipt{margin-left:16px; margin-right:16px;}
-    #app.admin-wide .periods-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:0 16px;}
+    #app.admin-wide .periods-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(340px,1fr)); gap:16px; padding:0 16px;}
     #app.admin-wide .periods-grid .period-block{margin:0;}
     #app.admin-wide nav.tabs{max-width:820px;}
+    #app.admin-wide .top-fields-row{display:grid; grid-template-columns:1fr 1.4fr 1.4fr; gap:12px; align-items:end;}
   }
   @media (min-width:1000px){
     #app.admin-wide{max-width:1180px;}
     #app.admin-wide nav.tabs{max-width:1180px;}
-    #app.admin-wide .admin-layout{display:grid; grid-template-columns:1fr 360px; gap:20px; align-items:start; padding:0 16px;}
+    #app.admin-wide .admin-layout{display:grid; grid-template-columns:1fr 420px; gap:20px; align-items:start; padding:0 16px;}
     #app.admin-wide .admin-layout .receipt{margin-left:0; margin-right:0;}
-    #app.admin-wide .admin-main .periods-grid{padding:0; grid-template-columns:1fr 1fr;}
+    #app.admin-wide .admin-main .periods-grid{padding:0; grid-template-columns:repeat(auto-fill, minmax(330px,1fr));}
     #app.admin-wide .admin-side{position:sticky; top:16px; display:flex; flex-direction:column;}
   }
   @media (min-width:1350px){
-    #app.admin-wide{max-width:1400px;}
-    #app.admin-wide nav.tabs{max-width:1400px;}
-    #app.admin-wide .admin-main .periods-grid{grid-template-columns:1fr 1fr 1fr;}
+    #app.admin-wide{max-width:1440px;}
+    #app.admin-wide nav.tabs{max-width:1440px;}
+    #app.admin-wide .admin-main .periods-grid{grid-template-columns:repeat(auto-fill, minmax(360px,1fr));}
   }
+
 
   header.top{display:flex; align-items:center; justify-content:space-between; background:#fff; color:var(--navy); padding:16px 16px; margin:0 0 18px; border-bottom:1px solid var(--line); box-shadow:0 1px 3px rgba(4,23,82,0.05);}
   header.top h1{font-size:17px; font-weight:800; letter-spacing:-0.02em; margin:0; color:var(--navy); display:flex; align-items:center; gap:6px; text-transform:uppercase;}
@@ -692,17 +694,19 @@ function renderAdmin(){
     : `<div class="banner" style="background:var(--green);">Ny provisionsmodell</div>`;
   html += `<div class="admin-layout"><div class="admin-main">`;
   html += `<div class="receipt">
-    <h2>Admin — bygg månadens budget <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
-    <div class="field"><label>Butik (denna provision gäller endast för vald butik)</label>
-      <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);" onchange="state.adminButik=this.value">
-        <option value="" ${!state.adminButik?'selected':''}>— Välj butik —</option>
-        <option value="varmdo" ${state.adminButik==='varmdo'?'selected':''}>Värmdö</option>
-        <option value="akersberga" ${state.adminButik==='akersberga'?'selected':''}>Åkersberga</option>
-        <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
-      </select>
+    <h2>Provisionsuppgifter <button class="btn-small" style="color:var(--ink-soft)" onclick="backFromAdmin()">Stäng</button></h2>
+    <div class="top-fields-row">
+      <div class="field"><label>Butik</label>
+        <select style="width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; background:var(--card);" onchange="state.adminButik=this.value">
+          <option value="" ${!state.adminButik?'selected':''}>— Välj butik —</option>
+          <option value="varmdo" ${state.adminButik==='varmdo'?'selected':''}>Värmdö</option>
+          <option value="akersberga" ${state.adminButik==='akersberga'?'selected':''}>Åkersberga</option>
+          <option value="bada" ${state.adminButik==='bada'?'selected':''}>Båda butikerna</option>
+        </select>
+      </div>
+      <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" onblur="render()" placeholder="t.ex. Juli 2026"></div>
+      <div class="field"><label>Butik/avdelning (rubrik på A4)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
     </div>
-    <div class="field"><label>Namn (visas i appen)</label><input value="${state.adminMonthName}" oninput="state.adminMonthName=this.value" onblur="render()" placeholder="t.ex. Juli 2026"></div>
-    <div class="field"><label>Butik/avdelning (rubrik på A4-utskriften)</label><input value="${state.adminDeptName}" oninput="state.adminDeptName=this.value" placeholder="t.ex. Tech"></div>
   </div>`;
 
   html += `<div class="periods-grid">`;
@@ -811,9 +815,9 @@ function renderAdmin(){
 function renderAdminOverview(periods){
   const validPeriods = (periods||[]).filter(p => (p.steg||[]).some(s=>s.namn && s.krav!=='' && s.procent!==''));
   if(!validPeriods.length){
-    return `<div class="receipt"><h2>Överblick</h2><div class="empty">Fyll i minst en period med ett fullständigt steg för att se en överblick här.</div></div>`;
+    return `<div class="receipt"><h2 style="font-size:14px; text-transform:none; color:var(--navy);">Överblick</h2><div class="empty">Fyll i minst en period med ett fullständigt steg för att se en överblick här.</div></div>`;
   }
-  let html = `<div class="receipt"><h2>Överblick — så här ser det ut för säljaren</h2>`;
+  let html = `<div class="receipt"><h2 style="font-size:14px; text-transform:none; color:var(--navy); letter-spacing:0;">Överblick — så här ser det ut för säljaren</h2>`;
   validPeriods.forEach(p => {
     const stegSorted = (p.steg||[]).filter(s=>s.namn && s.krav!=='' && s.procent!=='').slice().sort((a,b)=>b.krav-a.krav);
     html += `<div style="margin-bottom:14px; padding-bottom:14px; border-bottom:1px solid var(--line);">
